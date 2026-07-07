@@ -7,7 +7,6 @@ const db = require('../db');
 router.post('/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-
     const users = await Promise.resolve(db.all('users'));
     const user = users.find(u => u.username === username);
 
@@ -20,7 +19,6 @@ router.post('/auth/login', async (req, res) => {
     }
 
     const isMatch = bcrypt.compareSync(password, user.passwordHash);
-
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid username or password' });
     }
