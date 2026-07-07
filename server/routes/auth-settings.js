@@ -4,10 +4,11 @@ const bcrypt = require('bcryptjs');
 const db = require('../db');
 
 // POST /api/auth/login
-router.post('/auth/login', async (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
+    // Get all users and find by username
     const users = await Promise.resolve(db.all('users'));
     const user = users.find(u => u.username === username);
 
@@ -15,16 +16,19 @@ router.post('/auth/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid username or password' });
     }
 
+    // Check if passwordHash exists
     if (!user.passwordHash) {
       return res.status(401).json({ success: false, message: 'User account not fully set up' });
     }
 
+    // Compare password
     const isMatch = bcrypt.compareSync(password, user.passwordHash);
 
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid username or password' });
     }
 
+    // Set session
     req.session.userId = user.id;
     req.session.role = user.role;
 
@@ -45,13 +49,13 @@ router.post('/auth/login', async (req, res) => {
 });
 
 // POST /api/auth/logout
-router.post('/auth/logout', (req, res) => {
+router.post('/logout', (req, res) => {
   req.session.destroy();
   res.json({ success: true });
 });
 
 // GET /api/auth/me
-router.get('/auth/me', async (req, res) => {
+router.get('/me', async (req, res) => {
   try {
     if (!req.session.userId) {
       return res.status(401).json({ success: false, message: 'Not authenticated' });
