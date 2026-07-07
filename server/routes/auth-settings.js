@@ -8,7 +8,7 @@ router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // Get all users and find by username
+    // Find user using custom db module
     const users = await Promise.resolve(db.all('users'));
     const user = users.find(u => u.username === username);
 
