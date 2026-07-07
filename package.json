@@ -1,0 +1,19 @@
+{
+  "name": "third-eye-pos",
+  "version": "1.0.0",
+  "description": "Third Eye Computer Solutions - POS System",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "mongodb": "^6.3.0"
+  }
+}

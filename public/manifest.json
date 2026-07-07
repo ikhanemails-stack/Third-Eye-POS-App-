@@ -1,0 +1,14 @@
+{
+  "name": "Third Eye POS",
+  "short_name": "TECS POS",
+  "description": "Third Eye Computer Solutions POS System",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "orientation": "any",
+  "icons": [
+    { "src": "/img/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/img/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

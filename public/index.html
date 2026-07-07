@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POS System — Third Eye Computer Solutions</title>
+<link rel="stylesheet" href="/css/styles.css">
+<link rel="stylesheet" href="/css/pos-screen.css">
+<!-- PWA Support: allows installation as app on mobile and desktop -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TECS POS">
+</head>
+<body>
+<div id="app"></div>
+<div id="toast-container" class="toast-container"></div>
+
+<script src="/js/icons.js"></script>
+<script src="/js/vendor/qrcode.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/toast.js"></script>
+<script src="/js/router.js"></script>
+<script src="/js/components/shell.js"></script>
+<script src="/js/components/modal.js"></script>
+<script src="/js/components/quick-add.js"></script>
+<script src="/js/components/bulk-select.js"></script>
+<script src="/js/components/charts.js"></script>
+<script src="/js/components/receipt.js"></script>
+<script src="/js/screens/activation.js"></script>
+<script src="/js/screens/login.js"></script>
+<script src="/js/screens/dashboard.js"></script>
+<script src="/js/screens/pos.js"></script>
+<script src="/js/screens/inventory.js"></script>
+<script src="/js/screens/purchases.js"></script>
+<script src="/js/screens/sales-history.js"></script>
+<script src="/js/screens/customers.js"></script>
+<script src="/js/screens/delivery.js"></script>
+<script src="/js/screens/accounting.js"></script>
+<script src="/js/screens/daily-expenses.js"></script>
+<script src="/js/screens/reports.js"></script>
+<script src="/js/screens/vendors.js"></script>
+<script src="/js/screens/employees.js"></script>
+<script src="/js/screens/expiry.js"></script>
+<script src="/js/screens/settings.js"></script>
+<script src="/js/screens/users.js"></script>
+<script src="/js/screens/backup.js"></script>
+<script src="/js/main.js"></script>
+<!-- Register Service Worker for PWA -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        // SW registration failed silently - app still works normally
+      });
+    });
+  }
+</script>
+</body>
+</html>
