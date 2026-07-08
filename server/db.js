@@ -1,10 +1,10 @@
 // Third Eye Computer Solutions - POS System
-// Database engine.
-// - Local mode (default): synchronous JSON file storage
-// - MongoDB mode: set MONGODB_URI environment variable
+// Database engine with transparent MongoDB support.
 //
-// In MongoDB mode, all public methods return Promises.
-// Routes must use async/await when MONGODB_URI is set.
+// STRATEGY: When MongoDB is enabled, we maintain an in-memory cache of all
+// collections. Reads are served from the cache (synchronously, just like the
+// local JSON mode). Writes go to both MongoDB AND update the cache.
+// This means ALL existing route code works unchanged - no await needed in routes.
 
 const fs   = require('fs');
 const path = require('path');
@@ -22,11 +22,7 @@ function readTable(t) {
   const fp = filePath(t);
   if (!fs.existsSync(fp)) return [];
   try { const r = fs.readFileSync(fp,'utf-8'); return r.trim() ? JSON.parse(r) : []; }
-  catch(e) {
-    const bak = fp+'.bak';
-    if (fs.existsSync(bak)) { try { return JSON.parse(fs.readFileSync(bak,'utf-8')); } catch(_){} }
-    return [];
-  }
+  catch(e) { return []; }
 }
 
 function writeTable(t, data) {
@@ -41,8 +37,9 @@ function nextId(rows) {
   return Math.max(...rows.map(r=>Number(r.id)||0))+1;
 }
 
-// ── MONGODB (async) ───────────────────────────────────────────────────────
+// ── MONGODB with in-memory cache ──────────────────────────────────────────
 let _mdb = null;
+const _cache = {}; // table name -> array of documents
 
 async function connectMongo() {
   if (_mdb) return _mdb;
@@ -50,89 +47,114 @@ async function connectMongo() {
   const client = new MongoClient(MONGO_URI, { serverSelectionTimeoutMS: 10000 });
   await client.connect();
   _mdb = client.db('tecs_pos');
-  console.log('✅ MongoDB Atlas connected');
+  console.log('✅ Connected to MongoDB Atlas');
   return _mdb;
 }
 
-// ── UNIFIED API ───────────────────────────────────────────────────────────
-// When USE_MONGO=true every method returns a Promise.
-// When USE_MONGO=false every method returns a value synchronously.
-// Routes should use `await db.xxx()` always — works in both modes.
+async function loadCollection(table) {
+  if (_cache[table]) return _cache[table];
+  const mdb = await connectMongo();
+  const docs = await mdb.collection(table).find({}).toArray();
+  _cache[table] = docs;
+  return docs;
+}
+
+async function saveToMongo(table, rows) {
+  try {
+    const mdb = await connectMongo();
+    await mdb.collection(table).deleteMany({});
+    if (rows.length > 0) await mdb.collection(table).insertMany(rows.map(r => ({...r})));
+  } catch(e) {
+    console.error('MongoDB write error:', e.message);
+  }
+}
+
+// ── Sync-compatible db API ────────────────────────────────────────────────
+// In MongoDB mode: reads come from cache (sync), writes update cache + MongoDB
+// In local mode: reads/writes use JSON files (sync)
+
+function getRows(table) {
+  if (!USE_MONGO) return readTable(table);
+  return _cache[table] || [];
+}
+
+function setRows(table, rows) {
+  if (!USE_MONGO) {
+    writeTable(table, rows);
+    return;
+  }
+  _cache[table] = rows;
+  saveToMongo(table, rows); // async fire-and-forget (cache is source of truth)
+}
 
 const db = {
   get isMongo() { return USE_MONGO; },
-  connectMongo,
-  ensureTable(t, def) {
-    if (!USE_MONGO && !fs.existsSync(filePath(t)))
-      writeTable(t, def || []);
+
+  // Connect and pre-load ALL collections into cache
+  async initMongo() {
+    await connectMongo();
+    // Pre-load common tables into cache
+    const tables = [
+      'settings','users','categories','suppliers','products',
+      'sales','sale_items','customers','coupons','deliveries',
+      'expenses','expense_categories','daily_balances',
+      'vendor_bills','vendor_payments','employees',
+      'expiry_items','returns','reminders','cash_sessions',
+      'purchases','purchase_items','stock_movements'
+    ];
+    for (const t of tables) {
+      await loadCollection(t);
+    }
+    console.log('✅ All collections loaded into memory cache');
   },
 
-  all(t) {
-    if (!USE_MONGO) return readTable(t);
-    return connectMongo().then(m => m.collection(t).find({}).toArray());
+  ensureTable(t, def) {
+    if (!USE_MONGO) {
+      if (!fs.existsSync(filePath(t))) writeTable(t, def || []);
+    } else {
+      if (!_cache[t]) _cache[t] = def || [];
+    }
   },
-  find(t, pred) {
-    if (!USE_MONGO) return readTable(t).find(pred);
-    return this.all(t).then(rows => rows.find(pred));
-  },
-  filter(t, pred) {
-    if (!USE_MONGO) return readTable(t).filter(pred);
-    return this.all(t).then(rows => rows.filter(pred));
-  },
-  getById(t, id) {
-    if (!USE_MONGO) return readTable(t).find(r=>r.id===Number(id));
-    return connectMongo().then(m => m.collection(t).findOne({ id: Number(id) }));
-  },
+
+  all(t) { return getRows(t); },
+
+  find(t, pred) { return getRows(t).find(pred) || null; },
+
+  filter(t, pred) { return getRows(t).filter(pred); },
+
+  getById(t, id) { return getRows(t).find(r => r.id === Number(id)) || null; },
+
   insert(t, rec) {
-    if (!USE_MONGO) {
-      const rows = readTable(t);
-      const id = nextId(rows);
-      const now = new Date().toISOString();
-      const doc = Object.assign({ id, createdAt:now, updatedAt:now }, rec);
-      rows.push(doc); writeTable(t, rows); return doc;
-    }
-    return connectMongo().then(async m => {
-      const rows = await m.collection(t).find({}).toArray();
-      const id = rows.length ? Math.max(...rows.map(r=>Number(r.id)||0))+1 : 1;
-      const now = new Date().toISOString();
-      const doc = Object.assign({ id, createdAt:now, updatedAt:now }, rec);
-      await m.collection(t).insertOne(doc);
-      return doc;
-    });
+    const rows = getRows(t);
+    const id = nextId(rows);
+    const now = new Date().toISOString();
+    const doc = Object.assign({ id, createdAt: now, updatedAt: now }, rec);
+    rows.push(doc);
+    setRows(t, rows);
+    return doc;
   },
+
   update(t, id, upd) {
-    if (!USE_MONGO) {
-      const rows = readTable(t);
-      const i = rows.findIndex(r=>r.id===Number(id));
-      if (i===-1) return null;
-      rows[i] = Object.assign({}, rows[i], upd, { updatedAt: new Date().toISOString() });
-      writeTable(t, rows); return rows[i];
-    }
-    return connectMongo().then(m => m.collection(t).findOneAndUpdate(
-      { id: Number(id) },
-      { $set: { ...upd, updatedAt: new Date().toISOString() } },
-      { returnDocument: 'after' }
-    ));
+    const rows = getRows(t);
+    const i = rows.findIndex(r => r.id === Number(id));
+    if (i === -1) return null;
+    rows[i] = Object.assign({}, rows[i], upd, { updatedAt: new Date().toISOString() });
+    setRows(t, rows);
+    return rows[i];
   },
+
   delete(t, id) {
-    if (!USE_MONGO) {
-      const rows = readTable(t);
-      const i = rows.findIndex(r=>r.id===Number(id));
-      if (i===-1) return false;
-      rows.splice(i,1); writeTable(t, rows); return true;
-    }
-    return connectMongo().then(async m => {
-      const r = await m.collection(t).deleteOne({ id: Number(id) });
-      return r.deletedCount > 0;
-    });
+    const rows = getRows(t);
+    const i = rows.findIndex(r => r.id === Number(id));
+    if (i === -1) return false;
+    rows.splice(i, 1);
+    setRows(t, rows);
+    return true;
   },
+
   replaceAll(t, rows) {
-    if (!USE_MONGO) { writeTable(t, rows); return rows; }
-    return connectMongo().then(async m => {
-      await m.collection(t).deleteMany({});
-      if (rows.length) await m.collection(t).insertMany(rows);
-      return rows;
-    });
+    setRows(t, rows);
+    return rows;
   }
 };
 
