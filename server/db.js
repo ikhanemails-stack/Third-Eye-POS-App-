@@ -59,11 +59,45 @@ async function loadCollection(table) {
   return docs;
 }
 
+// ── FIXED: saveToMongo no longer deletes everything! ──────────────────────
+// Instead of deleteMany + insertMany, we now do UPSERT (update or insert)
+// This preserves data that exists in MongoDB but not in cache (like licenses from admin)
+
 async function saveToMongo(table, rows) {
   try {
     const mdb = await connectMongo();
-    await mdb.collection(table).deleteMany({});
-    if (rows.length > 0) await mdb.collection(table).insertMany(rows.map(r => ({...r})));
+    
+    // Get current MongoDB data to find what's new/changed/deleted
+    const existingDocs = await mdb.collection(table).find({}).toArray();
+    const existingIds = new Set(existingDocs.map(r => r.id).filter(id => id !== undefined));
+    const cacheIds = new Set(rows.map(r => r.id).filter(id => id !== undefined));
+    
+    // 1. Delete documents that are in MongoDB but NOT in cache (only if explicitly deleted)
+    // For now, we skip deletion to be safe - admin data should never be deleted by POS
+    
+    // 2. Upsert (update or insert) each row from cache
+    for (const row of rows) {
+      if (row.id !== undefined) {
+        await mdb.collection(table).updateOne(
+          { id: row.id },
+          { $set: { ...row } },
+          { upsert: true }
+        );
+      } else {
+        // No id, insert as new
+        await mdb.collection(table).insertOne({ ...row });
+      }
+    }
+    
+    // 3. Also insert any documents from MongoDB that are NOT in cache
+    // This ensures admin-created licenses are preserved in cache
+    for (const doc of existingDocs) {
+      if (doc.id !== undefined && !cacheIds.has(doc.id)) {
+        // Document exists in MongoDB but not in cache - add to cache
+        rows.push(doc);
+      }
+    }
+    
   } catch(e) {
     console.error('MongoDB write error:', e.message);
   }
@@ -93,6 +127,7 @@ const db = {
   // Connect and pre-load ALL collections into cache
   async initMongo() {
     await connectMongo();
+    
     // Pre-load common tables into cache
     const tables = [
       'settings','users','categories','suppliers','products',
@@ -100,11 +135,26 @@ const db = {
       'expenses','expense_categories','daily_balances',
       'vendor_bills','vendor_payments','employees',
       'expiry_items','returns','reminders','cash_sessions',
-      'purchases','purchase_items','stock_movements'
+      'purchases','purchase_items','stock_movements',
+      'licenses'  // ← ADDED: Make sure licenses are loaded!
     ];
+    
     for (const t of tables) {
       await loadCollection(t);
     }
+    
+    // ── CRITICAL FIX: Sync cache with MongoDB for all tables ─────────────
+    // This ensures any data created by admin app (like licenses) is in cache
+    const mdb = await connectMongo();
+    const allCollections = await mdb.listCollections().toArray();
+    for (const col of allCollections) {
+      const colName = col.name;
+      if (!_cache[colName]) {
+        const docs = await mdb.collection(colName).find({}).toArray();
+        _cache[colName] = docs;
+      }
+    }
+    
     console.log('✅ All collections loaded into memory cache');
   },
 
@@ -112,7 +162,11 @@ const db = {
     if (!USE_MONGO) {
       if (!fs.existsSync(filePath(t))) writeTable(t, def || []);
     } else {
-      if (!_cache[t]) _cache[t] = def || [];
+      // FIXED: Only set cache if empty, never overwrite existing data
+      if (!_cache[t] || _cache[t].length === 0) {
+        _cache[t] = def || [];
+      }
+      // Don't call setRows here - it triggers saveToMongo which could wipe data
     }
   },
 

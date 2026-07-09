@@ -1,11 +1,21 @@
 // Third Eye Computer Solutions - POS System
-// Initializes default data tables on first run.
+// Initializes default data tables on FIRST RUN ONLY.
 // Works with BOTH local JSON files AND MongoDB Atlas.
 
 const db     = require('./db');
 const bcrypt = require('bcryptjs');
 
 async function seed() {
+  // ── CRITICAL FIX: Check if database already has data ────────────────────
+  // If ANY of these collections have data, skip ALL seeding
+  const existingUsers = await Promise.resolve(db.all('users')).catch(() => []);
+  const existingProducts = await Promise.resolve(db.all('products')).catch(() => []);
+  
+  if ((existingUsers && existingUsers.length > 0) || (existingProducts && existingProducts.length > 0)) {
+    console.log('✅ Database already seeded. Skipping initialization to preserve existing data (including licenses).');
+    return;
+  }
+
   // ── Shop settings ───────────────────────────────────────────────────────
   db.ensureTable('settings', [{
     id: 1,
@@ -35,8 +45,8 @@ async function seed() {
 
   // ── Admin user ───────────────────────────────────────────────────────────
   db.ensureTable('users', []);
-  const existingUsers = await Promise.resolve(db.all('users'));
-  if (!existingUsers || existingUsers.length === 0) {
+  const users = await Promise.resolve(db.all('users'));
+  if (!users || users.length === 0) {
     await Promise.resolve(db.insert('users', {
       name: 'Admin',
       username: 'admin',
@@ -49,8 +59,8 @@ async function seed() {
 
   // ── Categories ───────────────────────────────────────────────────────────
   db.ensureTable('categories', []);
-  const existingCats = await Promise.resolve(db.all('categories'));
-  if (!existingCats || existingCats.length === 0) {
+  const cats = await Promise.resolve(db.all('categories'));
+  if (!cats || cats.length === 0) {
     for (const name of ['Groceries', 'Beverages', 'Dairy', 'Bakery', 'Household', 'Personal Care']) {
       await Promise.resolve(db.insert('categories', { name }));
     }
@@ -61,10 +71,10 @@ async function seed() {
 
   // ── Products ─────────────────────────────────────────────────────────────
   db.ensureTable('products', []);
-  const existingProducts = await Promise.resolve(db.all('products'));
-  if (!existingProducts || existingProducts.length === 0) {
-    const cats = await Promise.resolve(db.all('categories'));
-    const getCat = name => { const c = cats.find(x => x.name === name); return c ? c.id : null; };
+  const products = await Promise.resolve(db.all('products'));
+  if (!products || products.length === 0) {
+    const allCats = await Promise.resolve(db.all('categories'));
+    const getCat = name => { const c = allCats.find(x => x.name === name); return c ? c.id : null; };
     const sample = [
       { name: 'Basmati Rice 5kg',    barcode: '6291003023310', categoryId: getCat('Groceries'),  costPrice: 3.500, sellPrice: 4.250, stock: 50, unit: 'bag',    vatApplicable: true  },
       { name: 'Cooking Oil 1.5L',    barcode: '6291003045304', categoryId: getCat('Groceries'),  costPrice: 1.800, sellPrice: 2.300, stock: 40, unit: 'bottle', vatApplicable: true  },
@@ -106,7 +116,7 @@ async function seed() {
   db.ensureTable('purchases', []);
   db.ensureTable('stock_movements', []);
 
-  console.log('Database initialized with default data.');
+  console.log('✅ Database initialized with default data (FIRST RUN ONLY).');
 }
 
 module.exports = { seed };
