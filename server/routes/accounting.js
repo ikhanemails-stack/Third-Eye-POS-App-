@@ -163,3 +163,54 @@ router.get('/accounting/profit-loss', requireLogin, (req, res) => {
 });
 
 module.exports = router;
+
+// ── DAILY EXPENSES SUMMARY ──────────────────────────────────────────────────
+router.get('/expenses/daily-summary', requireLogin, (req, res) => {
+  try {
+    const date = req.query.date || new Date().toISOString().slice(0,10);
+    const all  = db.all('expenses');
+    const dayExpenses = all.filter(e => (e.date||'').slice(0,10) === date || (e.createdAt||'').slice(0,10) === date);
+
+    const TYPES = ['vendor_payment','employee_salary','utilities','rent','other'];
+    const summary = {};
+    TYPES.forEach(t => { summary[t] = 0; });
+    dayExpenses.forEach(e => {
+      const t = TYPES.includes(e.expenseType) ? e.expenseType : 'other';
+      summary[t] += Number(e.amount)||0;
+    });
+
+    const totalExpenses = Object.values(summary).reduce((a,b)=>a+b,0);
+
+    // Previous day balance
+    const prevDate = new Date(date+'T12:00:00');
+    prevDate.setDate(prevDate.getDate()-1);
+    const prevDateStr = prevDate.toISOString().slice(0,10);
+    const balances = db.all('daily_balances') || [];
+    const prevRecord = balances.find(r => r.date === prevDateStr);
+    const prevDayBalance = prevRecord ? (prevRecord.remainingBalance||0) : 0;
+    const remainingBalance = prevDayBalance - totalExpenses;
+
+    res.json({ date, prevDayBalance, summary, totalExpenses, remainingBalance, expenses: dayExpenses });
+  } catch(err) {
+    console.error('Daily summary error:', err);
+    res.status(500).json({ error: 'Could not load daily expenses: ' + err.message });
+  }
+});
+
+router.post('/expenses/daily-summary', requireLogin, (req, res) => {
+  try {
+    const { date, remainingBalance } = req.body;
+    if (!date) return res.status(400).json({ error: 'Date required.' });
+    db.ensureTable('daily_balances', []);
+    const records = db.all('daily_balances') || [];
+    const existing = records.find(r => r.date === date);
+    if (existing) {
+      db.update('daily_balances', existing.id, { remainingBalance });
+    } else {
+      db.insert('daily_balances', { date, remainingBalance });
+    }
+    res.json({ success: true });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});

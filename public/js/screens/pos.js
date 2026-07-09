@@ -20,7 +20,7 @@ const PosScreen = {
     Shell.mount('/pos', `<div class="empty-state">Loading products...</div>`);
     try {
       [this.products, this.categories, this.customers, this.drivers] = await Promise.all([
-        Api.get('/products'),
+        Api.get('/products?limit=200&page=1'),  // Load first 200 fast, search loads more
         Api.get('/categories'),
         Api.get('/customers'),
         Api.get('/drivers')
@@ -101,16 +101,35 @@ const PosScreen = {
 
     // Debounced search for performance with 3000+ products
     let searchTimer = null;
-    document.getElementById('pos-search').addEventListener('input', (e) => {
-      this.searchTerm = e.target.value;
-      // Instant barcode match (exact), otherwise debounce 150ms
-      const exact = this.products.find(p => p.barcode === this.searchTerm.trim());
-      if (exact) {
+    document.getElementById('pos-search').addEventListener('input', async (e) => {
+      this.searchTerm = e.target.value.trim();
+
+      // Instant barcode match in loaded products
+      const exact = this.products.find(p => p.barcode === this.searchTerm);
+      if (exact && this.searchTerm.length > 3) {
         this.handleBarcodeEnter();
         return;
       }
+
       clearTimeout(searchTimer);
-      searchTimer = setTimeout(() => this.renderProductGrid(), 150);
+      if (!this.searchTerm) {
+        this.renderProductGrid();
+        return;
+      }
+
+      // Search server-side for full 3000 product database
+      searchTimer = setTimeout(async () => {
+        try {
+          const result = await Api.get(`/products?search=${encodeURIComponent(this.searchTerm)}&limit=50`);
+          // Server returns array directly when not paginated
+          this._searchResults = Array.isArray(result) ? result : (result.products || []);
+          this._isSearchMode = true;
+          this.renderProductGrid();
+        } catch(e) {
+          this._isSearchMode = false;
+          this.renderProductGrid();
+        }
+      }, 200);
     });
     document.getElementById('pos-search').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this.handleBarcodeEnter();
@@ -181,9 +200,13 @@ const PosScreen = {
   },
 
   getFilteredProducts() {
-    let list = this.products;
+    // If we have server search results, use those
+    if (this._isSearchMode && this.searchTerm && this._searchResults) {
+      return this._searchResults;
+    }
+    let list = this.products || [];
     if (this.activeCategory !== null) list = list.filter(p => p.categoryId === this.activeCategory);
-    if (this.searchTerm.trim()) {
+    if (this.searchTerm && this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase();
       list = list.filter(p => p.name.toLowerCase().includes(term) || (p.barcode && p.barcode.includes(term)));
     }

@@ -1,5 +1,5 @@
 // Third Eye Computer Solutions - POS System
-// Shared helpers and middleware.
+// Shared middleware helpers.
 
 function requireLogin(req, res, next) {
   if (req.session && req.session.userId) return next();
@@ -13,8 +13,11 @@ function requireAdmin(req, res, next) {
 
 function requireLicense(req, res, next) {
   const license = require('./license');
+  // Check current status (uses in-memory cache - instant)
   const status = license.getActivationStatus();
   if (!status.activated) {
+    // Destroy session immediately so user is logged out
+    if (req.session) req.session.destroy(() => {});
     return res.status(402).json({ error: 'LICENSE_INVALID', details: status });
   }
   next();

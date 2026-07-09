@@ -65,15 +65,35 @@ router.post('/suppliers/bulk-delete', requireAdmin, (req, res) => {
 // ---------- PRODUCTS ----------
 
 router.get('/products', requireLogin, (req, res) => {
-  const { search } = req.query;
+  const { search, page, limit, categoryId } = req.query;
   let products = db.all('products');
+
+  // Filter by category
+  if (categoryId) {
+    products = products.filter(p => p.categoryId === Number(categoryId));
+  }
+
+  // Fast search
   if (search) {
-    const term = search.toLowerCase();
+    const term = search.toLowerCase().trim();
+    // Exact barcode match first
+    const exact = products.find(p => p.barcode === term);
+    if (exact) return res.json([exact]);
     products = products.filter(p =>
       p.name.toLowerCase().includes(term) ||
       (p.barcode && p.barcode.includes(term))
     );
   }
+
+  // Pagination for large datasets
+  if (page !== undefined && limit !== undefined) {
+    const pg  = Math.max(1, parseInt(page) || 1);
+    const lim = Math.min(100, parseInt(limit) || 50);
+    const total = products.length;
+    products = products.slice((pg-1)*lim, pg*lim);
+    return res.json({ products, total, page: pg, limit: lim });
+  }
+
   res.json(products);
 });
 

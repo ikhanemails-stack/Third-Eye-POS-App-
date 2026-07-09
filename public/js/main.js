@@ -175,3 +175,34 @@ function applyTheme(key) {
     document.body.setAttribute('data-theme', saved);
   }
 })();
+
+// ── IMMEDIATE LICENSE REVOCATION POLLING ────────────────────────────────────
+// Polls the server every 30 seconds. If license is revoked, shows lock screen
+// immediately without waiting for the next API call.
+(function startLicensePolling() {
+  const POLL_INTERVAL = 30 * 1000; // 30 seconds
+
+  async function checkLicense() {
+    // Only check if user is logged in
+    if (!App || !App.session) return;
+    try {
+      const status = await fetch('/api/license/status').then(r => r.json());
+      if (!status.activated) {
+        console.warn('🔒 License revoked - locking screen');
+        Api._licenseLockTriggered = false; // reset so it triggers
+        if (typeof ActivationScreen !== 'undefined') {
+          App.session = null;
+          ActivationScreen.render(status);
+        }
+      }
+    } catch(e) {
+      // Network error - ignore, grace period handles it server-side
+    }
+  }
+
+  // Start polling after 5 seconds (give app time to load)
+  setTimeout(() => {
+    checkLicense();
+    setInterval(checkLicense, POLL_INTERVAL);
+  }, 5000);
+})();
