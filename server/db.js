@@ -12,6 +12,12 @@ const path = require('path');
 const MONGO_URI = process.env.MONGODB_URI || '';
 const USE_MONGO  = !!MONGO_URI;
 
+// Database name inside the Mongo cluster. Defaults to 'tecs_pos' so nothing
+// breaks for the existing shop, but each NEW shop should set its own
+// MONGODB_DB_NAME (e.g. 'shop_alrifaa', 'shop_seef') so multiple shops can
+// share ONE Atlas cluster while keeping their data completely separate.
+const MONGO_DB_NAME = process.env.MONGODB_DB_NAME || 'tecs_pos';
+
 // ── LOCAL JSON (sync) ─────────────────────────────────────────────────────
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -46,8 +52,8 @@ async function connectMongo() {
   const { MongoClient } = require('mongodb');
   const client = new MongoClient(MONGO_URI, { serverSelectionTimeoutMS: 10000 });
   await client.connect();
-  _mdb = client.db('tecs_pos');
-  console.log('✅ Connected to MongoDB Atlas');
+  _mdb = client.db(MONGO_DB_NAME);
+  console.log(`✅ Connected to MongoDB Atlas (database: ${MONGO_DB_NAME})`);
   return _mdb;
 }
 
@@ -136,7 +142,8 @@ const db = {
       'vendor_bills','vendor_payments','employees',
       'expiry_items','returns','reminders','cash_sessions',
       'purchases','purchase_items','stock_movements',
-      'licenses'  // ← ADDED: Make sure licenses are loaded!
+      'licenses',  // ← ADDED: Make sure licenses are loaded!
+      'backup_recipients'
     ];
     
     for (const t of tables) {

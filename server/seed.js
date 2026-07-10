@@ -112,6 +112,7 @@ async function seed() {
   db.ensureTable('returns', []);
   db.ensureTable('reminders', []);
   db.ensureTable('cash_sessions', []);
+  db.ensureTable('backup_recipients', []);
   db.ensureTable('purchase_items', []);
   db.ensureTable('purchases', []);
   db.ensureTable('stock_movements', []);

@@ -18,42 +18,65 @@ const TABLES = [
   'employees', 'deliveries', 'purchases'
 ];
 
+const { buildBackupObjectForMailer } = require('../backup-shared');
+
 // ── MANUAL BACKUP DOWNLOAD ─────────────────────────────────────────────────
 router.get('/backup/download', requireLogin, requireAdmin, async (req, res) => {
   try {
-    const backup = {
-      version: '1.0',
-      createdAt: new Date().toISOString(),
-      shopName: '',
-      tables: {}
-    };
-
-    // Read all tables
-    for (const table of TABLES) {
-      try {
-        backup.tables[table] = await db.all(table);
-      } catch (e) {
-        backup.tables[table] = [];
-      }
-    }
-
-    // Get shop name for filename
-    const settings = await db.all('settings');
-    if (settings && settings[0]) {
-      backup.shopName = settings[0].shopName || 'MyShop';
-    }
-
-    const date = new Date();
-    const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-    const filename = `TECS-Backup-${backup.shopName.replace(/[^a-zA-Z0-9]/g,'-')}-${dateStr}.json`;
-
+    const { backup, filename } = await buildBackupObjectForMailer();
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(JSON.stringify(backup, null, 2));
-
   } catch (err) {
     console.error('Backup error:', err);
     res.status(500).json({ error: 'Backup failed. Please try again.' });
+  }
+});
+
+// ── EMAIL RECIPIENTS (add / edit / delete) ─────────────────────────────────
+// Stored via the normal db abstraction, so this works identically whether
+// the shop is on local JSON storage or MongoDB.
+router.get('/backup/recipients', requireLogin, requireAdmin, async (req, res) => {
+  res.json(await db.all('backup_recipients'));
+});
+
+router.post('/backup/recipients', requireLogin, requireAdmin, async (req, res) => {
+  const email = (req.body.email || '').trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Please enter a valid email address.' });
+  }
+  const existing = await db.all('backup_recipients');
+  if (existing.find(r => r.email === email)) {
+    return res.status(400).json({ error: 'That email is already on the list.' });
+  }
+  const rec = db.insert('backup_recipients', { email });
+  res.json(rec);
+});
+
+router.put('/backup/recipients/:id', requireLogin, requireAdmin, async (req, res) => {
+  const email = (req.body.email || '').trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Please enter a valid email address.' });
+  }
+  const updated = db.update('backup_recipients', req.params.id, { email });
+  if (!updated) return res.status(404).json({ error: 'Recipient not found.' });
+  res.json(updated);
+});
+
+router.delete('/backup/recipients/:id', requireLogin, requireAdmin, async (req, res) => {
+  res.json({ success: db.delete('backup_recipients', req.params.id) });
+});
+
+// ── MANUAL "SEND NOW" (send today's backup to all recipients immediately,
+// useful for testing SMTP setup without waiting for midnight) ──────────────
+router.post('/backup/send-now', requireLogin, requireAdmin, async (req, res) => {
+  try {
+    const { runBackupAndEmail } = require('../backup-mailer');
+    const result = await runBackupAndEmail();
+    res.json(result);
+  } catch (err) {
+    console.error('Send-now backup error:', err);
+    res.status(500).json({ error: err.message || 'Failed to send backup email.' });
   }
 });
 

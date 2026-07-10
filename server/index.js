@@ -67,6 +67,7 @@ async function start() {
     const { seed } = require('./seed');
     await seed();
     license.startBackgroundChecks();
+    require('./backup-scheduler').startBackupScheduler();
     app.listen(PORT, () => {
       console.log('');
       console.log('========================================');

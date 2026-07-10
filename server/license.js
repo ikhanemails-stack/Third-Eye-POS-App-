@@ -96,14 +96,20 @@ function checkServerRevocation(licenseKey) {
 
 async function runRevocationCheck() {
   const stored = getStoredLicense();
-  if (!stored || stored.revoked) return;
+  // IMPORTANT: do NOT bail out just because stored.revoked is true - that
+  // would make revocation permanent and un-recoverable, since this is the
+  // only function that ever re-contacts the license server. A previously
+  // revoked shop MUST still be able to check in and come back online once
+  // the admin reactivates it.
+  if (!stored) return;
 
   const result = await checkServerRevocation(stored.licenseKey);
   if (result.reachable) {
     if (result.valid) {
       // ✅ Valid - update timestamp and clear revocation
       _revokedInMemory = false;
-      updateStoredLicense({ lastVerifiedAt:new Date().toISOString(), revoked:false });
+      _revokedReason   = '';
+      updateStoredLicense({ lastVerifiedAt:new Date().toISOString(), revoked:false, revokedReason:'' });
     } else {
       // ❌ Revoked/expired - set immediately in memory for instant effect
       _revokedInMemory = true;

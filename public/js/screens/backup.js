@@ -6,6 +6,7 @@ const BackupScreen = {
     Shell.mount('/backup', this.buildHtml());
     this.checkLastBackup();
     this.wireEvents();
+    this.loadRecipients();
   },
 
   buildHtml() {
@@ -48,6 +49,21 @@ const BackupScreen = {
       </div>
 
       <div class="backup-card" style="grid-column:1/-1">
+        <div class="backup-icon" style="background:#ede9fe;color:#5b21b6">✉️</div>
+        <h2 class="backup-card-title">Automatic Daily Email Backup</h2>
+        <p class="backup-card-desc">Every night at 12:00 AM, the server automatically backs up your data and emails it to the addresses below — no need to keep this screen or your computer open.</p>
+        <div id="recipients-list" style="margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input type="email" id="new-recipient-email" placeholder="owner@example.com" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);font-size:13px">
+          <button id="add-recipient-btn" class="btn btn-gold" style="padding:8px 16px">+ Add</button>
+        </div>
+        <button id="send-test-btn" style="background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer">
+          ✉️ Send Test Backup Email Now
+        </button>
+        <div id="recipient-status" style="margin-top:10px;font-size:13px"></div>
+      </div>
+
+      <div class="backup-card" style="grid-column:1/-1">
         <div class="backup-icon" style="background:#fef3c7;color:#92400e">⬆</div>
         <h2 class="backup-card-title">Restore From Backup</h2>
         <p class="backup-card-desc">Upload a backup file to restore all your data. <strong style="color:#b45309">Warning: This will replace ALL current data.</strong></p>
@@ -83,6 +99,79 @@ const BackupScreen = {
     const fileInput = document.getElementById('backup-file-input');
     if (zone) zone.addEventListener('click', () => fileInput && fileInput.click());
     if (fileInput) fileInput.addEventListener('change', (e) => this.handleBackupFile(e));
+
+    const addBtn = document.getElementById('add-recipient-btn');
+    if (addBtn) addBtn.addEventListener('click', () => this.addRecipient());
+    const emailInput = document.getElementById('new-recipient-email');
+    if (emailInput) emailInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.addRecipient(); });
+    const testBtn = document.getElementById('send-test-btn');
+    if (testBtn) testBtn.addEventListener('click', () => this.sendTestEmail());
+  },
+
+  async loadRecipients() {
+    const list = document.getElementById('recipients-list');
+    if (!list) return;
+    try {
+      const res = await fetch('/api/backup/recipients');
+      const recipients = await res.json();
+      if (!recipients.length) {
+        list.innerHTML = '<div style="font-size:13px;color:var(--text-muted)">No recipients yet — add an email below.</div>';
+        return;
+      }
+      list.innerHTML = recipients.map(r => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-1);border-radius:8px;margin-bottom:6px">
+          <span style="font-size:13px">${r.email}</span>
+          <button data-id="${r.id}" class="remove-recipient-btn" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:13px">Remove</button>
+        </div>`).join('');
+      list.querySelectorAll('.remove-recipient-btn').forEach(btn => {
+        btn.addEventListener('click', () => this.removeRecipient(btn.dataset.id));
+      });
+    } catch (e) {
+      list.innerHTML = '<div style="font-size:13px;color:#dc2626">Could not load recipients.</div>';
+    }
+  },
+
+  async addRecipient() {
+    const input = document.getElementById('new-recipient-email');
+    const status = document.getElementById('recipient-status');
+    const email = input.value.trim();
+    if (!email) return;
+    try {
+      const res = await fetch('/api/backup/recipients', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email })
+      });
+      const result = await res.json();
+      if (!res.ok) { status.innerHTML = `<span style="color:#dc2626">${result.error}</span>`; return; }
+      input.value = '';
+      status.innerHTML = '<span style="color:#065f46">✅ Added.</span>';
+      this.loadRecipients();
+    } catch (e) {
+      status.innerHTML = '<span style="color:#dc2626">Failed to add recipient.</span>';
+    }
+  },
+
+  async removeRecipient(id) {
+    await fetch(`/api/backup/recipients/${id}`, { method: 'DELETE' });
+    this.loadRecipients();
+  },
+
+  async sendTestEmail() {
+    const status = document.getElementById('recipient-status');
+    const btn = document.getElementById('send-test-btn');
+    btn.disabled = true; btn.textContent = '⏳ Sending...';
+    try {
+      const res = await fetch('/api/backup/send-now', { method: 'POST' });
+      const result = await res.json();
+      if (!res.ok || result.sent === false) {
+        status.innerHTML = `<span style="color:#dc2626">❌ ${result.error || result.reason}</span>`;
+      } else {
+        status.innerHTML = `<span style="color:#065f46">✅ Sent to ${result.recipients.join(', ')}</span>`;
+      }
+    } catch (e) {
+      status.innerHTML = '<span style="color:#dc2626">❌ Failed to send. Check SMTP settings.</span>';
+    } finally {
+      btn.disabled = false; btn.textContent = '✉️ Send Test Backup Email Now';
+    }
   },
 
   checkLastBackup() {
