@@ -19,12 +19,16 @@ const PosScreen = {
   async render() {
     Shell.mount('/pos', `<div class="empty-state">Loading products...</div>`);
     try {
-      [this.products, this.categories, this.customers, this.drivers] = await Promise.all([
+      let productsRes;
+      [productsRes, this.categories, this.customers, this.drivers] = await Promise.all([
         Api.get('/products?limit=200&page=1'),  // Load first 200 fast, search loads more
         Api.get('/categories'),
         Api.get('/customers'),
         Api.get('/drivers')
       ]);
+      // /products with page+limit returns {products, total, page, limit} instead of
+      // a plain array — unwrap it so the rest of this screen can treat it as a list.
+      this.products = Array.isArray(productsRes) ? productsRes : (productsRes.products || []);
     } catch (err) {
       Toast.error(err.message);
       return;
