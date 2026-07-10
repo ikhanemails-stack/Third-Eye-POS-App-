@@ -66,7 +66,14 @@ const InventoryScreen = {
               return `
               <tr>
                 ${BulkSelect.checkboxCell(p.id)}
-                <td><strong>${escapeHtml(p.name)}</strong></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    ${p.photo
+                      ? `<img src="${escapeHtml(p.photo)}" class="inv-row-thumb" alt="">`
+                      : `<span class="inv-row-thumb inv-row-thumb-empty">📦</span>`}
+                    <strong>${escapeHtml(p.name)}</strong>
+                  </div>
+                </td>
                 <td>${cat ? escapeHtml(cat.name) : '<span style="color:var(--text-muted)">-</span>'}</td>
                 <td style="font-family:var(--font-mono);font-size:0.78rem">${escapeHtml(p.barcode || '-')}</td>
                 <td>${formatMoney(p.costPrice, settings)}</td>
@@ -212,11 +219,41 @@ const InventoryScreen = {
             <div style="display:flex;gap:8px">
               <input class="form-input" id="p-barcode" value="${escapeHtml(product?.barcode || '')}" placeholder="Scan or type barcode">
               <button type="button" class="btn-quick-add" id="generate-barcode-btn" title="Generate a barcode number">${Icon.box}</button>
+              <button type="button" class="btn-quick-add" id="lookup-barcode-btn" title="Auto-fill name/category/photo from this barcode using online product databases">🌐</button>
             </div>
-            <div class="form-hint">Scan with a barcode scanner, type manually, or click the box icon to auto-generate one.</div>
+            <div class="form-hint">Scan with a barcode scanner, type manually, generate one, or click 🌐 to auto-fill details online.</div>
           </div>
           ${QuickAddSelect.render({ id: 'p-category', label: 'Category', options: this.categories, selectedId: product?.categoryId, placeholder: 'No category' })}
         </div>
+        <div id="lookup-result-box"></div>
+
+        <div class="form-group product-photo-group">
+          <label class="form-label">Product Photo (optional)</label>
+          <input type="hidden" id="p-photo" value="${escapeHtml(product?.photo || '')}">
+          <div class="product-photo-row">
+            <div class="product-photo-preview" id="photo-preview">
+              ${product?.photo
+                ? `<img src="${escapeHtml(product.photo)}" alt="Product photo">`
+                : `<span class="product-photo-placeholder">📦</span>`}
+            </div>
+            <div class="product-photo-actions">
+              <button type="button" class="btn-icon-label" id="search-photo-btn">🔍 Search Photo Online</button>
+              <label class="btn-icon-label" style="cursor:pointer">
+                📤 Upload From Device
+                <input type="file" id="photo-upload-input" accept="image/*" style="display:none">
+              </label>
+              <button type="button" class="btn-icon-label danger" id="remove-photo-btn" ${product?.photo ? '' : 'style="display:none"'}>🗑 Remove Photo</button>
+            </div>
+          </div>
+          <div id="photo-search-box" style="display:none">
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <input class="form-input" id="photo-search-input" placeholder="Search product name for photos (e.g. Basmati Rice)" value="${escapeHtml(product?.name || '')}">
+              <button type="button" class="btn btn-outline btn-sm" id="run-photo-search-btn">Search</button>
+            </div>
+            <div id="photo-results-grid" class="photo-results-grid"></div>
+          </div>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Cost Price (BHD)</label>
@@ -271,6 +308,103 @@ const InventoryScreen = {
       document.getElementById('p-barcode').value = code;
     });
 
+    // ── Set the product photo (preview + hidden field + remove button) ──
+    const setPhoto = (url) => {
+      document.getElementById('p-photo').value = url || '';
+      document.getElementById('photo-preview').innerHTML = url
+        ? `<img src="${escapeHtml(url)}" alt="Product photo">`
+        : `<span class="product-photo-placeholder">📦</span>`;
+      document.getElementById('remove-photo-btn').style.display = url ? '' : 'none';
+    };
+
+    document.getElementById('remove-photo-btn').addEventListener('click', () => setPhoto(''));
+
+    document.getElementById('photo-upload-input').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file || !file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => { setPhoto(ev.target.result); Toast.success('Photo uploaded.'); };
+      reader.readAsDataURL(file);
+    });
+
+    // ── Search product photos online (server-side proxy, no CORS issues) ──
+    const photoSearchBox = document.getElementById('photo-search-box');
+    document.getElementById('search-photo-btn').addEventListener('click', () => {
+      const showing = photoSearchBox.style.display !== 'none';
+      photoSearchBox.style.display = showing ? 'none' : 'block';
+    });
+    const runPhotoSearch = async () => {
+      const q = document.getElementById('photo-search-input').value.trim();
+      if (!q) { Toast.error('Type a product name to search.'); return; }
+      const grid = document.getElementById('photo-results-grid');
+      grid.innerHTML = `<div class="empty-state" style="padding:16px;grid-column:1/-1">Searching online product databases...</div>`;
+      try {
+        const { results } = await Api.get(`/products/image-search?q=${encodeURIComponent(q)}`);
+        if (!results || results.length === 0) {
+          grid.innerHTML = `<div class="empty-state" style="padding:16px;grid-column:1/-1">No photos found. Try a different search term, or upload one.</div>`;
+          return;
+        }
+        grid.innerHTML = results.map((r, i) => `
+          <button type="button" class="photo-result-thumb" data-idx="${i}" title="${escapeHtml(r.name || 'Use this photo')}">
+            <img src="${escapeHtml(r.photo)}" alt="${escapeHtml(r.name || '')}">
+          </button>
+        `).join('');
+        grid.querySelectorAll('.photo-result-thumb').forEach(btn => {
+          btn.addEventListener('click', () => {
+            setPhoto(results[Number(btn.dataset.idx)].photo);
+            photoSearchBox.style.display = 'none';
+            Toast.success('Photo selected.');
+          });
+        });
+      } catch (err) {
+        grid.innerHTML = `<div class="empty-state" style="padding:16px;grid-column:1/-1">Image search failed: ${escapeHtml(err.message)}</div>`;
+      }
+    };
+    document.getElementById('run-photo-search-btn').addEventListener('click', runPhotoSearch);
+    document.getElementById('photo-search-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); runPhotoSearch(); }
+    });
+
+    // ── Auto-fill product details from an online barcode lookup ──
+    document.getElementById('lookup-barcode-btn').addEventListener('click', async () => {
+      const barcode = document.getElementById('p-barcode').value.trim();
+      const box = document.getElementById('lookup-result-box');
+      if (!barcode || barcode.length < 6) {
+        Toast.error('Enter a barcode first (at least 6 digits).');
+        return;
+      }
+      box.innerHTML = `<div class="empty-state" style="padding:12px">🌐 Looking up barcode ${escapeHtml(barcode)}...</div>`;
+      try {
+        const result = await Api.get(`/products/lookup/${encodeURIComponent(barcode)}`);
+        if (!result.found) {
+          box.innerHTML = `<div class="form-hint" style="color:var(--danger-600, #c0392b)">No product found online for this barcode. Fill in the details manually.</div>`;
+          return;
+        }
+        box.innerHTML = `
+          <div class="card" style="background:var(--gold-100);border-color:rgba(201,162,39,0.3);padding:12px;margin-bottom:14px">
+            <div style="font-size:0.78rem;color:var(--gold-600);margin-bottom:6px">✅ Found via ${escapeHtml(result.source)}</div>
+            <div style="display:flex;gap:10px;align-items:center">
+              ${result.photo ? `<img src="${escapeHtml(result.photo)}" style="width:48px;height:48px;object-fit:cover;border-radius:8px">` : ''}
+              <div>
+                <strong>${escapeHtml(result.name || '')}</strong>
+                ${result.category ? `<div style="font-size:0.78rem;color:var(--text-muted)">${escapeHtml(result.category)}</div>` : ''}
+              </div>
+            </div>
+            <button type="button" class="btn btn-gold btn-sm" id="apply-lookup-btn" style="margin-top:10px">Fill In These Details</button>
+          </div>
+        `;
+        document.getElementById('apply-lookup-btn').addEventListener('click', () => {
+          const nameInput = document.getElementById('p-name');
+          if (result.name && !nameInput.value.trim()) nameInput.value = result.name;
+          if (result.photo) setPhoto(result.photo);
+          box.innerHTML = '';
+          Toast.success('Product details filled in from online lookup.');
+        });
+      } catch (err) {
+        box.innerHTML = `<div class="form-hint" style="color:var(--danger-600, #c0392b)">Lookup failed: ${escapeHtml(err.message)}</div>`;
+      }
+    });
+
     document.getElementById('product-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const payload = {
@@ -282,7 +416,8 @@ const InventoryScreen = {
         sellPrice: Number(document.getElementById('p-price').value),
         unit: document.getElementById('p-unit').value.trim() || 'pcs',
         vatApplicable: document.getElementById('p-vat').checked,
-        expiryDate: document.getElementById('p-expiry').value ? new Date(document.getElementById('p-expiry').value).toISOString() : null
+        expiryDate: document.getElementById('p-expiry').value ? new Date(document.getElementById('p-expiry').value).toISOString() : null,
+        photo: document.getElementById('p-photo').value || ''
       };
       if (!isEdit) payload.stock = Number(document.getElementById('p-stock').value) || 0;
       try {

@@ -110,6 +110,81 @@ router.get('/products/barcode/:code', requireLogin, (req, res) => {
   res.json(product);
 });
 
+// ---------- ONLINE PRODUCT LOOKUP & IMAGE SEARCH ----------
+// These two routes proxy free, no-API-key product databases from the
+// SERVER side (not the browser) so there are no CORS problems and no
+// API keys are ever exposed to the frontend. Used by the "Add Product"
+// form's barcode auto-fill and online photo search features.
+
+// Looks up a barcode against Open Food Facts (great grocery/food coverage)
+// and falls back to UPC Item DB (broader general-product coverage).
+// Returns { found:false } rather than an error when nothing matches, so
+// the frontend can just say "not found, fill in manually" instead of
+// treating it as a failure.
+router.get('/products/lookup/:barcode', requireLogin, async (req, res) => {
+  const barcode = String(req.params.barcode || '').trim();
+  if (!barcode || barcode.length < 6) {
+    return res.json({ found: false, reason: 'Barcode too short.' });
+  }
+  try {
+    const offRes = await fetch(`https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(barcode)}.json`);
+    const off = await offRes.json();
+    if (off && off.status === 1 && off.product) {
+      const p = off.product;
+      const name = p.product_name || p.product_name_en || p.abbreviated_product_name || '';
+      const brand = p.brands || '';
+      const category = (p.categories_hierarchy && p.categories_hierarchy[0] || p.pnns_groups_1 || '').replace('en:', '');
+      const photo = p.image_front_url || p.image_url || p.image_front_thumb_url || '';
+      if (name) {
+        return res.json({
+          found: true, source: 'Open Food Facts',
+          name: brand ? `${brand} ${name}` : name,
+          category, brand, photo
+        });
+      }
+    }
+  } catch (e) { /* fall through to next source */ }
+
+  try {
+    const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(barcode)}`);
+    const upc = await upcRes.json();
+    if (upc && upc.items && upc.items.length > 0) {
+      const item = upc.items[0];
+      return res.json({
+        found: true, source: 'UPC Item DB',
+        name: item.title || '', category: item.category || '',
+        brand: item.brand || '', photo: (item.images && item.images[0]) || '',
+        price: item.lowest_recorded_price || ''
+      });
+    }
+  } catch (e) { /* fall through */ }
+
+  res.json({ found: false });
+});
+
+// Searches for product photos by name (no barcode needed) - useful when
+// adding a product manually and you just want a decent photo for it.
+router.get('/products/image-search', requireLogin, async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (!q) return res.status(400).json({ error: 'Search query is required.' });
+  try {
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=10`;
+    const r = await fetch(url);
+    const data = await r.json();
+    const results = (data.products || [])
+      .map(p => ({
+        name: p.product_name || p.product_name_en || '',
+        brand: p.brands || '',
+        photo: p.image_front_url || p.image_url || p.image_front_thumb_url || ''
+      }))
+      .filter(x => x.photo)
+      .slice(0, 8);
+    res.json({ results });
+  } catch (e) {
+    res.status(502).json({ error: 'Image search is temporarily unavailable. Please try again.' });
+  }
+});
+
 router.get('/products/:id', requireLogin, (req, res) => {
   const product = db.getById('products', req.params.id);
   if (!product) return res.status(404).json({ error: 'Product not found.' });
@@ -117,7 +192,7 @@ router.get('/products/:id', requireLogin, (req, res) => {
 });
 
 router.post('/products', requireLogin, (req, res) => {
-  const { name, barcode, categoryId, costPrice, sellPrice, stock, unit, vatApplicable, lowStockThreshold, expiryDate, supplierId } = req.body;
+  const { name, barcode, categoryId, costPrice, sellPrice, stock, unit, vatApplicable, lowStockThreshold, expiryDate, supplierId, photo } = req.body;
   if (!name || sellPrice === undefined) {
     return res.status(400).json({ error: 'Product name and sell price are required.' });
   }
@@ -135,7 +210,8 @@ router.post('/products', requireLogin, (req, res) => {
     unit: unit || 'pcs',
     vatApplicable: vatApplicable !== false,
     expiryDate: expiryDate || null,
-    lowStockThreshold: lowStockThreshold !== undefined ? Number(lowStockThreshold) : undefined
+    lowStockThreshold: lowStockThreshold !== undefined ? Number(lowStockThreshold) : undefined,
+    photo: photo || ''
   });
   if (product.stock > 0) {
     db.insert('stock_movements', {
@@ -147,7 +223,7 @@ router.post('/products', requireLogin, (req, res) => {
 });
 
 router.put('/products/:id', requireLogin, (req, res) => {
-  const allowed = ['name', 'barcode', 'categoryId', 'supplierId', 'costPrice', 'sellPrice', 'unit', 'vatApplicable', 'lowStockThreshold', 'expiryDate'];
+  const allowed = ['name', 'barcode', 'categoryId', 'supplierId', 'costPrice', 'sellPrice', 'unit', 'vatApplicable', 'lowStockThreshold', 'expiryDate', 'photo'];
   const updates = {};
   allowed.forEach(key => {
     if (req.body[key] !== undefined) updates[key] = req.body[key];

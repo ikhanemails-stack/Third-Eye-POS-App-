@@ -50,5 +50,6 @@ const Api = {
   post(url, body)   { return this.request('POST', url, body); },
   put(url, body)    { return this.request('PUT', url, body); },
   patch(url, body)  { return this.request('PATCH', url, body); },
-  delete(url)       { return this.request('DELETE', url); }
+  delete(url)       { return this.request('DELETE', url); },
+  del(url)          { return this.request('DELETE', url); }
 };

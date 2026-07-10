@@ -48,6 +48,7 @@ const PosScreen = {
         <div class="pos-products-pane">
           <div class="pos-search-bar">
             <input class="form-input" id="pos-search" placeholder="Search by name or scan barcode..." value="${escapeHtml(this.searchTerm)}" autofocus>
+            <button type="button" class="btn btn-outline" id="camera-scan-btn" title="Scan a barcode using your camera">📷 Scan</button>
           </div>
           <div class="pos-category-chips" id="pos-chips">
             <button class="chip ${this.activeCategory === null ? 'active' : ''}" data-cat="">All</button>
@@ -138,6 +139,7 @@ const PosScreen = {
     document.getElementById('pos-search').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this.handleBarcodeEnter();
     });
+    document.getElementById('camera-scan-btn').addEventListener('click', () => this.openCameraScanModal());
     document.getElementById('pos-chips').addEventListener('click', (e) => {
       const btn = e.target.closest('.chip');
       if (!btn) return;
@@ -149,6 +151,7 @@ const PosScreen = {
       this.appliedCoupon = null;
       this.redeemPoints = 0;
       this.renderCart();
+      this.focusSearch();
     });
     document.querySelectorAll('.order-type-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -188,6 +191,99 @@ const PosScreen = {
     QuickAddSelect.wire('delivery-driver', (name) => Api.post('/drivers', { name }), (created) => {
       this.drivers.push(created);
     });
+  },
+
+  // Puts the cursor back in the POS search box so the cashier can keep
+  // scanning/typing without having to click back into it after every
+  // action (adding an item, changing quantity, closing a modal, etc.)
+  focusSearch() {
+    const input = document.getElementById('pos-search');
+    if (input) input.focus();
+  },
+
+  // Camera-based barcode scanning for devices without a hardware scanner
+  // (phones, tablets, laptop webcams). Uses the browser's native
+  // BarcodeDetector API where available (Chrome/Edge/Android) - no external
+  // library or internet connection needed to scan. On browsers that don't
+  // support it yet (notably Safari/iOS as of this writing), shows a clear
+  // message instead of a broken camera view.
+  async openCameraScanModal() {
+    if (!('BarcodeDetector' in window)) {
+      Modal.open('Camera Scan Not Supported', `
+        <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.5">
+          This browser doesn't support camera-based barcode scanning yet
+          (this feature currently works on Chrome, Edge, and most Android
+          browsers). You can still use a USB/Bluetooth barcode scanner, or
+          type the barcode directly into the search box.
+        </p>
+      `);
+      return;
+    }
+
+    Modal.open('Scan Barcode', `
+      <div class="camera-scan-wrap">
+        <video id="camera-scan-video" autoplay playsinline muted></video>
+        <div class="camera-scan-frame"></div>
+      </div>
+      <p style="color:var(--text-secondary);font-size:0.82rem;text-align:center;margin-top:10px">
+        Point the camera at a barcode. It will be added to the cart automatically.
+      </p>
+      <div id="camera-scan-error" style="color:var(--danger-600,#c0392b);font-size:0.82rem;text-align:center;margin-top:6px"></div>
+    `);
+
+    const video = document.getElementById('camera-scan-video');
+    const errorBox = document.getElementById('camera-scan-error');
+    let stream = null;
+    let stopped = false;
+    let detector;
+    try {
+      detector = new BarcodeDetector({
+        formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code']
+      });
+    } catch (e) {
+      detector = new BarcodeDetector();
+    }
+
+    const stop = () => {
+      stopped = true;
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    };
+    // Stop the camera whenever the modal is closed (X button, backdrop click,
+    // or a successful scan closing it programmatically below).
+    const overlay = document.getElementById('active-modal-overlay');
+    if (overlay) {
+      const observer = new MutationObserver(() => {
+        if (!document.body.contains(overlay)) { stop(); observer.disconnect(); }
+      });
+      observer.observe(document.body, { childList: true });
+    }
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = stream;
+    } catch (e) {
+      errorBox.textContent = 'Could not access the camera. Please check camera permissions for this site.';
+      return;
+    }
+
+    const scanLoop = async () => {
+      if (stopped) return;
+      try {
+        const codes = await detector.detect(video);
+        if (codes.length > 0) {
+          const value = codes[0].rawValue;
+          stop();
+          Modal.close();
+          this.searchTerm = value;
+          const input = document.getElementById('pos-search');
+          if (input) input.value = value;
+          this.handleBarcodeEnter();
+          return;
+        }
+      } catch (e) { /* keep trying */ }
+      if (!stopped) requestAnimationFrame(scanLoop);
+    };
+    video.addEventListener('loadedmetadata', () => scanLoop());
   },
 
   handleBarcodeEnter() {
@@ -234,6 +330,7 @@ const PosScreen = {
       return `
       <button class="pos-product-card ${p.stock <= 0 ? 'out-of-stock' : ''} ${inCart ? 'in-cart' : ''}" data-id="${p.id}" ${p.stock <= 0 ? 'disabled' : ''}>
         ${inCart ? `<div class="in-cart-badge">${inCart.quantity}</div>` : ''}
+        ${p.photo ? `<img class="pos-product-photo" src="${escapeHtml(p.photo)}" alt="">` : ''}
         <div class="pname">${escapeHtml(p.name)}</div>
         <div class="pstock">${p.stock} ${escapeHtml(p.unit)} in stock</div>
         <div class="pprice">${formatMoneyPlain(p.sellPrice, App.settings)}</div>
@@ -245,6 +342,7 @@ const PosScreen = {
       btn.addEventListener('click', () => {
         const product = this.products.find(p => p.id === Number(btn.dataset.id));
         if (product) this.addToCart(product);
+        this.focusSearch();
       });
     });
   },
@@ -609,6 +707,7 @@ const PosScreen = {
         this.printReceipt(sale);
         [this.products, this.customers] = await Promise.all([Api.get('/products'), Api.get('/customers')]);
         this.renderScreen();
+        this.focusSearch();
         Toast.success(`Sale completed: ${sale.invoiceNo}${sale.delivery ? ' - delivery order created' : ''}`);
       } catch (err) {
         Toast.error(err.message);
