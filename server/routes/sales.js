@@ -127,7 +127,21 @@ router.post('/sales', requireLogin, (req, res) => {
   }
 
   const finalTotal = Math.max(0, roundMoney(result.grandTotal - discountAmount, decimals));
-  const paid = amountPaid !== undefined ? roundMoney(Number(amountPaid), decimals) : finalTotal;
+
+  // "Credit" sales go on the customer's account instead of being paid now -
+  // they must be tied to a real customer, and (if the customer has a credit
+  // limit set) can't push the customer past that limit.
+  if (paymentMethod === 'credit') {
+    if (!customer) return res.status(400).json({ error: 'Select a customer to sell on credit.' });
+    const currentBalance = customer.balance || 0;
+    if (customer.creditLimit && (currentBalance + finalTotal) > customer.creditLimit) {
+      return res.status(400).json({ error: `This sale would exceed ${customer.name}'s credit limit (${customer.creditLimit.toFixed(decimals)}). Current balance: ${currentBalance.toFixed(decimals)}.` });
+    }
+  }
+
+  const paid = paymentMethod === 'credit'
+    ? 0
+    : (amountPaid !== undefined ? roundMoney(Number(amountPaid), decimals) : finalTotal);
   const changeDue = roundMoney(paid - finalTotal, decimals);
 
   if (paymentMethod === 'cash' && paid < finalTotal) {
@@ -180,6 +194,13 @@ router.post('/sales', requireLogin, (req, res) => {
     db.update('customers', customer.id, { loyaltyPoints: Math.max(0, newPoints) });
   }
 
+  // Credit sales add the full amount to the customer's outstanding balance
+  // (it will be reduced later when they pay it off from the Customers screen
+  // or when an unpaid delivery tied to this sale is collected).
+  if (paymentMethod === 'credit' && customer) {
+    db.update('customers', customer.id, { balance: roundMoney((customer.balance || 0) + finalTotal, decimals) });
+  }
+
   // Auto-create a delivery order if this sale is a delivery.
   let delivery = null;
   if (orderType === 'delivery') {
@@ -192,7 +213,8 @@ router.post('/sales', requireLogin, (req, res) => {
       driverId: driverId || null,
       deliveryFee: Number(deliveryFee) || 0,
       notes: notes || '',
-      status: 'pending'
+      status: 'pending',
+      paid: paymentMethod !== 'credit'
     });
   }
 

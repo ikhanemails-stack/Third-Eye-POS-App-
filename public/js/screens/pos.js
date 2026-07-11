@@ -618,7 +618,9 @@ const PosScreen = {
         <button class="payment-method-btn" data-method="card">${Icon.card} Card</button>
         <button class="payment-method-btn" data-method="benefitpay">${Icon.benefitpay} BenefitPay</button>
         <button class="payment-method-btn" data-method="qr">${Icon.qrcode} QR Code</button>
+        <button class="payment-method-btn" data-method="credit" ${this.selectedCustomerId ? '' : 'disabled title="Select a customer first to sell on credit"'}>${Icon.credit} Credit</button>
       </div>
+      ${this.selectedCustomerId ? '' : `<div class="card" style="background:var(--warning-bg);color:var(--warning);font-size:0.8rem;margin-bottom:12px">Select a customer above to enable Credit (pay later) sales.</div>`}
       <div class="form-group">
         <label class="form-label">Total Due</label>
         <div style="font-family:var(--font-mono);font-weight:700;font-size:1.6rem">${formatMoneyPlain(totals.finalTotal, settings)} ${settings.currency}</div>
@@ -660,6 +662,13 @@ const PosScreen = {
       if (method === 'qr') {
         this.renderQrCode(totals.finalTotal, settings);
       }
+      if (method === 'credit') {
+        document.getElementById('benefitpay-note-box').innerHTML = `
+          <div class="card" style="background:var(--warning-bg);border-color:rgba(201,122,27,0.3);font-size:0.82rem;color:var(--warning);margin-bottom:14px">
+            This adds ${formatMoneyPlain(totals.finalTotal, settings)} ${settings.currency} to the customer's outstanding balance. Nothing is collected now.
+          </div>
+        `;
+      }
     });
 
     const updateChange = () => {
@@ -678,6 +687,10 @@ const PosScreen = {
       const paid = Number(document.getElementById('amount-paid-input').value) || 0;
       if (method === 'cash' && paid < totals.finalTotal) {
         Toast.error('Amount received is less than the total due.');
+        return;
+      }
+      if (method === 'credit' && !this.selectedCustomerId) {
+        Toast.error('Select a customer before selling on credit.');
         return;
       }
       const payload = {

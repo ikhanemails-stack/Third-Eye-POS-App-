@@ -182,6 +182,23 @@ router.get('/reports/dashboard', requireLogin, (req, res) => {
     db.all('expenses').filter(e => new Date(e.date) >= rangeStart && new Date(e.date) <= rangeEnd).reduce((sum, e) => sum + e.amount, 0), 3
   );
 
+  // Credit customers - not period-scoped, this is a live outstanding-balance
+  // snapshot regardless of the dashboard's selected date range.
+  const creditCustomers = db.all('customers').filter(c => (c.balance || 0) > 0);
+  creditCustomers.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+  const creditTotalOwed = roundMoney(creditCustomers.reduce((sum, c) => sum + (c.balance || 0), 0), 3);
+
+  // Unpaid deliveries - also a live snapshot (money still owed on delivery
+  // orders that haven't been collected yet), joined to their sale for the
+  // outstanding amount.
+  const allDeliveries = db.all('deliveries');
+  const unpaidDeliveries = allDeliveries.filter(d => d.paid === false);
+  const unpaidWithAmount = unpaidDeliveries.map(d => {
+    const sale = d.saleId ? db.getById('sales', d.saleId) : null;
+    return { ...d, outstandingAmount: sale ? sale.total : (d.deliveryFee || 0) };
+  });
+  const unpaidTotalOutstanding = roundMoney(unpaidWithAmount.reduce((sum, d) => sum + d.outstandingAmount, 0), 3);
+
   res.json({
     period: { from: rangeStart.toISOString(), to: rangeEnd.toISOString() },
     todayRevenue: periodRevenue,
@@ -190,7 +207,24 @@ router.get('/reports/dashboard', requireLogin, (req, res) => {
     pendingDeliveries,
     totalDeliveries: periodDeliveries.length,
     todayExpenses: periodExpenses,
-    totalProducts: products.length
+    totalProducts: products.length,
+    creditCustomers: {
+      count: creditCustomers.length,
+      totalOwed: creditTotalOwed,
+      top: creditCustomers.slice(0, 5).map(c => ({
+        id: c.id, name: c.name, phone: c.phone, balance: c.balance || 0,
+        creditLimit: c.creditLimit || 0,
+        pctOfLimit: c.creditLimit ? Math.round(((c.balance || 0) / c.creditLimit) * 100) : null
+      }))
+    },
+    unpaidDeliveries: {
+      count: unpaidWithAmount.length,
+      totalOutstanding: unpaidTotalOutstanding,
+      list: unpaidWithAmount.slice(0, 5).map(d => ({
+        id: d.id, customerName: d.customerName, address: d.address,
+        outstandingAmount: d.outstandingAmount, status: d.status
+      }))
+    }
   });
 });
 

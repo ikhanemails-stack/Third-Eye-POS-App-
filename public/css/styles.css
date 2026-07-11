@@ -1075,3 +1075,159 @@ body[data-theme="dark"] .table-wrap table tbody tr:hover { background: #2a2a2a; 
   background: var(--surface, #f4f4f5);
   opacity: 0.6;
 }
+
+/* ── Order Pad (global floating quick-order widget) ───────────────────── */
+.order-pad-fab {
+  position: fixed;
+  top: 16px;
+  right: 24px;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
+  transition: transform 0.15s ease;
+}
+.order-pad-fab:hover { transform: translateY(-1px); }
+.order-pad-badge {
+  background: var(--danger, #D14545);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  border-radius: 999px;
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+}
+.order-pad-panel {
+  position: fixed;
+  top: 62px;
+  right: 24px;
+  z-index: 149;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--surface, #fff);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.22);
+  border: 1px solid var(--border, rgba(0,0,0,0.08));
+}
+.order-pad-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #fff;
+  border-radius: 14px 14px 0 0;
+}
+.order-pad-close {
+  background: rgba(255,255,255,0.18);
+  border: none;
+  color: #fff;
+  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.order-pad-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border, rgba(0,0,0,0.08));
+}
+.order-pad-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px 8px 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.order-pad-tab.active { background: var(--gold-100); color: var(--gold-600); }
+.order-pad-tab-x, .order-pad-item-x {
+  width: 13px; height: 13px; display: inline-flex; opacity: 0.6; cursor: pointer;
+}
+.order-pad-tab-x:hover, .order-pad-item-x:hover { opacity: 1; }
+.order-pad-tab-add {
+  padding: 7px 12px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.order-pad-body { padding: 14px 16px; }
+.order-pad-title { font-weight: 700; margin-bottom: 10px; font-size: 0.9rem; }
+.order-pad-search-results {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0; right: 0;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, rgba(0,0,0,0.1));
+  border-radius: 8px;
+  margin-top: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  z-index: 5;
+}
+.order-pad-search-item, .order-pad-search-empty {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.order-pad-search-item:hover { background: var(--gold-100); }
+.order-pad-search-empty { color: var(--text-muted); cursor: default; }
+.order-pad-items {
+  border: 1px solid var(--border, rgba(0,0,0,0.08));
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+.order-pad-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  padding: 4px 0;
+}
+.order-pad-total {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border, rgba(0,0,0,0.1));
+  margin-top: 4px;
+}
+.order-pad-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.order-pad-actions .btn-icon-label { flex: 1; justify-content: center; font-size: 0.78rem; }
+
+@media (max-width: 900px) {
+  .dash-two-col { grid-template-columns: 1fr !important; }
+  .order-pad-fab { top: auto; bottom: 16px; right: 16px; }
+  .order-pad-panel { top: auto; bottom: 70px; right: 16px; }
+}

@@ -42,18 +42,53 @@ router.get('/loyalty/tiers', requireLogin, (req, res) => {
 });
 
 router.post('/customers', requireLogin, (req, res) => {
-  const { name, phone, address } = req.body;
+  const { name, phone, address, creditLimit } = req.body;
   if (!name) return res.status(400).json({ error: 'Customer name is required.' });
-  res.json(db.insert('customers', { name, phone: phone || '', address: address || '', balance: 0, loyaltyPoints: 0 }));
+  res.json(db.insert('customers', {
+    name, phone: phone || '', address: address || '',
+    balance: 0, loyaltyPoints: 0, creditLimit: Number(creditLimit) || 0
+  }));
 });
 
 router.put('/customers/:id', requireLogin, (req, res) => {
-  const allowed = ['name', 'phone', 'address'];
+  const allowed = ['name', 'phone', 'address', 'creditLimit'];
   const updates = {};
-  allowed.forEach(key => { if (req.body[key] !== undefined) updates[key] = req.body[key]; });
+  allowed.forEach(key => { if (req.body[key] !== undefined) updates[key] = key === 'creditLimit' ? (Number(req.body[key]) || 0) : req.body[key]; });
   const updated = db.update('customers', req.params.id, updates);
   if (!updated) return res.status(404).json({ error: 'Customer not found.' });
   res.json(updated);
+});
+
+// Record a payment that reduces a customer's outstanding credit balance
+// (e.g. they come in and pay off part or all of what they owe).
+router.post('/customers/:id/collect-payment', requireLogin, (req, res) => {
+  const customer = db.getById('customers', req.params.id);
+  if (!customer) return res.status(404).json({ error: 'Customer not found.' });
+  const amount = roundMoney(Number(req.body.amount) || 0, 3);
+  if (amount <= 0) return res.status(400).json({ error: 'Enter a payment amount greater than zero.' });
+  const newBalance = roundMoney(Math.max(0, (customer.balance || 0) - amount), 3);
+  const updated = db.update('customers', customer.id, { balance: newBalance });
+  db.insert('customer_payments', {
+    customerId: customer.id, customerName: customer.name, amount,
+    collectedBy: req.session.userName, createdAt: new Date().toISOString()
+  });
+  res.json(updated);
+});
+
+// Credit customers overview - used by the Dashboard "Credit Customers" card.
+router.get('/customers/credit-summary', requireLogin, (req, res) => {
+  const customers = db.all('customers').filter(c => (c.balance || 0) > 0);
+  customers.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+  const totalOwed = roundMoney(customers.reduce((sum, c) => sum + (c.balance || 0), 0), 3);
+  res.json({
+    count: customers.length,
+    totalOwed,
+    customers: customers.map(c => ({
+      id: c.id, name: c.name, phone: c.phone, balance: c.balance || 0,
+      creditLimit: c.creditLimit || 0,
+      pctOfLimit: c.creditLimit ? Math.round(((c.balance || 0) / c.creditLimit) * 100) : null
+    }))
+  });
 });
 
 router.delete('/customers/:id', requireAdmin, (req, res) => {

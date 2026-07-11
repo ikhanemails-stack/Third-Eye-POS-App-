@@ -148,13 +148,18 @@ router.post('/deliveries', requireLogin, (req, res) => {
       couponCode: appliedCoupon ? appliedCoupon.code : null,
       total: finalTotal,
       paymentMethod: paymentMethod || 'cash',
-      amountPaid: finalTotal,
+      amountPaid: paymentMethod === 'credit' ? 0 : finalTotal,
       changeDue: 0,
       notes: notes || '',
       cashierId: req.session.userId,
       cashierName: req.session.userName,
       status: 'completed'
     });
+
+    if (paymentMethod === 'credit' && customerId) {
+      const cust = db.getById('customers', customerId);
+      if (cust) db.update('customers', cust.id, { balance: roundMoney((cust.balance || 0) + finalTotal, decimals) });
+    }
 
     result.lineItems.forEach(li => {
       db.insert('sale_items', { saleId: sale.id, ...li });
@@ -193,10 +198,29 @@ router.post('/deliveries', requireLogin, (req, res) => {
     driverId: driverId || null,
     deliveryFee: Number(deliveryFee) || 0,
     notes: notes || '',
-    status: 'pending'
+    status: 'pending',
+    paid: paymentMethod !== 'credit' && req.body.paid !== false
   });
 
   res.json({ ...delivery, sale: saleSummary });
+});
+
+// Mark an unpaid delivery as collected (cash/card taken on drop-off, or the
+// customer's account settled). Reduces the linked customer's credit balance
+// if the original sale was made on credit.
+router.put('/deliveries/:id/collect', requireLogin, (req, res) => {
+  const delivery = db.getById('deliveries', req.params.id);
+  if (!delivery) return res.status(404).json({ error: 'Delivery not found.' });
+  if (delivery.paid) return res.status(400).json({ error: 'This delivery is already marked as paid.' });
+
+  const sale = delivery.saleId ? db.getById('sales', delivery.saleId) : null;
+  if (sale && sale.paymentMethod === 'credit' && delivery.customerId) {
+    const cust = db.getById('customers', delivery.customerId);
+    if (cust) db.update('customers', cust.id, { balance: roundMoney(Math.max(0, (cust.balance || 0) - sale.total), 3) });
+    if (sale) db.update('sales', sale.id, { paymentMethod: 'cash', amountPaid: sale.total });
+  }
+  const updated = db.update('deliveries', delivery.id, { paid: true, collectedAt: new Date().toISOString() });
+  res.json(updated);
 });
 
 router.put('/deliveries/:id', requireLogin, (req, res) => {

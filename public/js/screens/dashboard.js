@@ -6,7 +6,7 @@ const DashboardScreen = {
   period: 'today',
   customFrom: '',
   customTo: '',
-  visibleMetrics: { revenue: true, expenses: true, transactions: true, lowStock: true, deliveries: true },
+  visibleMetrics: { revenue: true, expenses: true, transactions: true, lowStock: true, deliveries: true, creditCustomers: true, unpaidDeliveries: true },
 
   async render() {
     this.period = 'today';
@@ -159,6 +159,18 @@ const DashboardScreen = {
           <div class="stat-label">Expenses</div>
           <div class="stat-value">${formatMoney(summary.todayExpenses, settings)}</div>
         </div>` : ''}
+        ${m.creditCustomers ? `
+        <div class="stat-card ${summary.creditCustomers.count > 0 ? 'danger-accent' : ''}">
+          <div class="stat-label">Credit Customers</div>
+          <div class="stat-value">${summary.creditCustomers.count}</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px">${formatMoneyPlain(summary.creditCustomers.totalOwed, settings)} ${settings.currency} owed</div>
+        </div>` : ''}
+        ${m.unpaidDeliveries ? `
+        <div class="stat-card ${summary.unpaidDeliveries.count > 0 ? 'danger-accent' : 'success-accent'}">
+          <div class="stat-label">Unpaid Deliveries</div>
+          <div class="stat-value">${summary.unpaidDeliveries.count}</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px">${summary.unpaidDeliveries.count > 0 ? formatMoneyPlain(summary.unpaidDeliveries.totalOutstanding, settings) + ' ' + settings.currency + ' outstanding' : 'All collected'}</div>
+        </div>` : ''}
         <div class="stat-card">
           <div class="stat-label">Total Products</div>
           <div class="stat-value">${summary.totalProducts}</div>
@@ -233,6 +245,54 @@ const DashboardScreen = {
           </table>
         </div>`}
       </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px" class="dash-two-col">
+        <div class="card-flat">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <h3 style="font-size:1rem;font-weight:600">💳 Credit Customers</h3>
+            <a href="#/customers" class="btn btn-ghost btn-sm">View All</a>
+          </div>
+          ${summary.creditCustomers.top.length === 0 ? `<div class="empty-state" style="padding:30px"><p>No customers currently owe a balance.</p></div>` : `
+          <div class="table-wrap" style="box-shadow:none">
+            <table>
+              <thead><tr><th>Customer</th><th>Balance</th><th>Limit %</th><th></th></tr></thead>
+              <tbody>
+                ${summary.creditCustomers.top.map(c => `
+                  <tr>
+                    <td>${escapeHtml(c.name)}${c.phone ? `<div style="font-size:0.72rem;color:var(--text-muted)">${escapeHtml(c.phone)}</div>` : ''}</td>
+                    <td><span class="money" style="color:var(--danger);font-weight:700">${c.balance.toFixed(settings.currencyDecimals ?? 3)}</span></td>
+                    <td>${c.pctOfLimit !== null ? `<span class="badge ${c.pctOfLimit >= 90 ? 'badge-danger' : 'badge-warning'}">${c.pctOfLimit}%</span>` : `<span style="color:var(--text-muted);font-size:0.78rem">no limit</span>`}</td>
+                    <td><button class="btn btn-ghost btn-sm" data-collect-customer="${c.id}" data-customer-name="${escapeHtml(c.name)}" data-customer-balance="${c.balance}">Record Payment</button></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>`}
+        </div>
+
+        <div class="card-flat">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <h3 style="font-size:1rem;font-weight:600">🚚 Unpaid Deliveries</h3>
+            <a href="#/delivery" class="btn btn-ghost btn-sm">View All</a>
+          </div>
+          ${summary.unpaidDeliveries.list.length === 0 ? `<div class="empty-state" style="padding:30px"><p>✅ All deliveries collected.</p></div>` : `
+          <div class="table-wrap" style="box-shadow:none">
+            <table>
+              <thead><tr><th>Customer</th><th>Address</th><th>Amount</th><th></th></tr></thead>
+              <tbody>
+                ${summary.unpaidDeliveries.list.map(d => `
+                  <tr>
+                    <td>${escapeHtml(d.customerName || 'Walk-in')}</td>
+                    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(d.address || '')}</td>
+                    <td><span class="money" style="color:var(--danger);font-weight:700">${d.outstandingAmount.toFixed(settings.currencyDecimals ?? 3)}</span></td>
+                    <td><button class="btn btn-ghost btn-sm" data-collect-delivery="${d.id}">Mark Collected</button></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>`}
+        </div>
+      </div>
     `;
     document.getElementById('content').innerHTML = content;
 
@@ -261,6 +321,52 @@ const DashboardScreen = {
     }
     document.getElementById('metric-filter-btn').addEventListener('click', () => this.openMetricFilterModal());
     document.getElementById('dash-report-btn').addEventListener('click', () => this.generateReport());
+
+    document.querySelectorAll('[data-collect-customer]').forEach(btn => {
+      btn.addEventListener('click', () => this.openRecordPaymentModal(
+        btn.dataset.collectCustomer, btn.dataset.customerName, Number(btn.dataset.customerBalance)
+      ));
+    });
+    document.querySelectorAll('[data-collect-delivery]').forEach(btn => {
+      btn.addEventListener('click', () => this.collectDelivery(btn.dataset.collectDelivery));
+    });
+  },
+
+  openRecordPaymentModal(customerId, name, balance) {
+    const settings = App.settings;
+    Modal.open(`Record Payment - ${name}`, `
+      <div class="form-group">
+        <label class="form-label">Current Balance Owed</label>
+        <div style="font-family:var(--font-mono);font-weight:700;font-size:1.4rem;color:var(--danger)">${balance.toFixed(settings.currencyDecimals ?? 3)} ${settings.currency}</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount Received</label>
+        <input class="form-input" id="credit-payment-amount" type="number" step="0.001" value="${balance.toFixed(settings.currencyDecimals ?? 3)}">
+      </div>
+      <button class="btn btn-gold" id="confirm-credit-payment-btn" style="width:100%;justify-content:center;padding:12px">Record Payment</button>
+    `);
+    document.getElementById('confirm-credit-payment-btn').addEventListener('click', async () => {
+      const amount = Number(document.getElementById('credit-payment-amount').value) || 0;
+      if (amount <= 0) { Toast.error('Enter an amount greater than zero.'); return; }
+      try {
+        await Api.post(`/customers/${customerId}/collect-payment`, { amount });
+        Toast.success('Payment recorded.');
+        Modal.close();
+        this.load();
+      } catch (err) {
+        Toast.error(err.message);
+      }
+    });
+  },
+
+  async collectDelivery(deliveryId) {
+    try {
+      await Api.put(`/deliveries/${deliveryId}/collect`, {});
+      Toast.success('Delivery marked as collected.');
+      this.load();
+    } catch (err) {
+      Toast.error(err.message);
+    }
   },
 
   openMetricFilterModal() {
@@ -281,6 +387,12 @@ const DashboardScreen = {
       <div class="form-group">
         <label class="form-label" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="m-deliveries" ${m.deliveries ? 'checked' : ''} style="width:auto"> Deliveries</label>
       </div>
+      <div class="form-group">
+        <label class="form-label" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="m-creditCustomers" ${m.creditCustomers ? 'checked' : ''} style="width:auto"> Credit Customers</label>
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="m-unpaidDeliveries" ${m.unpaidDeliveries ? 'checked' : ''} style="width:auto"> Unpaid Deliveries</label>
+      </div>
       <button class="btn btn-gold" id="save-metrics-btn" style="width:100%;justify-content:center;padding:12px">Apply</button>
     `);
     document.getElementById('save-metrics-btn').addEventListener('click', () => {
@@ -289,7 +401,9 @@ const DashboardScreen = {
         expenses: document.getElementById('m-expenses').checked,
         transactions: document.getElementById('m-transactions').checked,
         lowStock: document.getElementById('m-lowStock').checked,
-        deliveries: document.getElementById('m-deliveries').checked
+        deliveries: document.getElementById('m-deliveries').checked,
+        creditCustomers: document.getElementById('m-creditCustomers').checked,
+        unpaidDeliveries: document.getElementById('m-unpaidDeliveries').checked
       };
       Modal.close();
       this.renderScreen(this._lastSummary, this._lastLowStock);

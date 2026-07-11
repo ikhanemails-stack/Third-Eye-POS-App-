@@ -101,6 +101,7 @@ const Shell = {
     }
     this.startClock();
     this.checkLicenseBanner();
+    if (typeof OrderPad !== 'undefined') OrderPad.ensureMounted();
   },
 
   // Shows a persistent, escalating license-expiry banner on EVERY screen
