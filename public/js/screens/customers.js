@@ -40,6 +40,7 @@ const CustomersScreen = {
 
       <div class="tabs">
         <div class="tab ${this.activeTab === 'customers' ? 'active' : ''}" data-tab="customers">Customers</div>
+        <div class="tab ${this.activeTab === 'credit' ? 'active' : ''}" data-tab="credit">Credit &amp; Payments</div>
         <div class="tab ${this.activeTab === 'coupons' ? 'active' : ''}" data-tab="coupons">Coupons &amp; Discounts</div>
       </div>
 
@@ -52,6 +53,7 @@ const CustomersScreen = {
     document.getElementById('add-customer-btn').addEventListener('click', () => this.openModal());
 
     if (this.activeTab === 'customers') this.renderCustomersTab();
+    else if (this.activeTab === 'credit') this.renderCreditTab();
     else this.renderCouponsTab();
   },
 
@@ -65,7 +67,7 @@ const CustomersScreen = {
       <div id="bulk-toolbar-container"></div>
       <div class="table-wrap">
         <table>
-          <thead><tr>${BulkSelect.checkboxHeader()}<th>Name</th><th>Phone</th><th>Address</th><th>Loyalty Points</th><th>Tier</th><th></th></tr></thead>
+          <thead><tr>${BulkSelect.checkboxHeader()}<th>Name</th><th>Phone</th><th>Address</th><th>Loyalty Points</th><th>Tier</th><th>Credit Balance</th><th></th></tr></thead>
           <tbody>
             ${this.customers.map(c => `
               <tr>
@@ -75,6 +77,7 @@ const CustomersScreen = {
                 <td>${escapeHtml(c.address || '-')}</td>
                 <td>${(c.loyaltyPoints || 0) > 0 ? `<span class="loyalty-badge">${Icon.check} ${c.loyaltyPoints} pts</span>` : '<span style="color:var(--text-muted)">0 pts</span>'}</td>
                 <td>${this.tierBadge(c.loyaltyTier)}</td>
+                <td>${(c.balance || 0) > 0 ? `<span class="money" style="color:var(--danger);font-weight:700">${(c.balance).toFixed(3)}</span>` : '<span style="color:var(--text-muted)">-</span>'}</td>
                 <td style="text-align:right;white-space:nowrap">
                   <button class="row-action row-action-adjust points-cust-btn" data-id="${c.id}" title="Adjust loyalty points">${Icon.key}</button>
                   <button class="row-action row-action-edit edit-cust-btn" data-id="${c.id}">${Icon.edit}</button>
@@ -113,6 +116,129 @@ const CustomersScreen = {
         this.renderScreen();
       } catch (err) { Toast.error(err.message); }
     });
+  },
+
+  // ---------- CREDIT & PAYMENTS ----------
+  // "Credit" here means a customer bought on Pay Later (POS payment method
+  // = Credit). This tab is where the shop tracks who owes what, and records
+  // payments as customers pay off their balance. Recording a payment here
+  // immediately: (1) reduces the customer's balance, (2) logs a dated entry
+  // in the customer's ledger, and (3) is picked up by Accounting's cash
+  // drawer reconciliation and Credit Collected stat - it never needs to be
+  // entered twice.
+  async renderCreditTab() {
+    const el = document.getElementById('customers-tab-content');
+    el.innerHTML = `<div class="empty-state">Loading credit accounts...</div>`;
+    let summary;
+    try {
+      summary = await Api.get('/customers/credit-summary');
+    } catch (err) {
+      Toast.error(err.message);
+      return;
+    }
+    const settings = App.settings;
+    el.innerHTML = `
+      <div class="stat-grid" style="margin-bottom:20px">
+        <div class="stat-card danger-accent">
+          <div class="stat-label">Customers With Balance Due</div>
+          <div class="stat-value">${summary.count}</div>
+        </div>
+        <div class="stat-card danger-accent">
+          <div class="stat-label">Total Outstanding</div>
+          <div class="stat-value">${formatMoney(summary.totalOwed, settings)}</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Customer</th><th>Phone</th><th>Balance Due</th><th>Credit Limit</th><th>% of Limit Used</th><th></th></tr></thead>
+          <tbody>
+            ${summary.customers.length === 0 ? `<tr><td colspan="6"><div class="empty-state"><p>No customers currently owe a balance.</p></div></td></tr>` : summary.customers.map(c => `
+              <tr>
+                <td><strong>${escapeHtml(c.name)}</strong></td>
+                <td>${escapeHtml(c.phone || '-')}</td>
+                <td><span class="money" style="color:var(--danger);font-weight:700">${c.balance.toFixed(settings.currencyDecimals ?? 3)}</span></td>
+                <td>${c.creditLimit ? c.creditLimit.toFixed(settings.currencyDecimals ?? 3) : '<span style="color:var(--text-muted)">No limit</span>'}</td>
+                <td>${c.pctOfLimit !== null ? `<span style="color:${c.pctOfLimit >= 90 ? 'var(--danger)' : c.pctOfLimit >= 60 ? 'var(--warning)' : 'inherit'}">${c.pctOfLimit}%</span>` : '-'}</td>
+                <td style="text-align:right;white-space:nowrap">
+                  <button class="btn btn-outline btn-sm" data-history="${c.id}">History</button>
+                  <button class="btn btn-gold btn-sm" data-collect="${c.id}" data-name="${escapeHtml(c.name)}" data-balance="${c.balance}">Record Payment</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    el.querySelectorAll('[data-collect]').forEach(btn => {
+      btn.addEventListener('click', () => this.openCollectPaymentModal(
+        Number(btn.dataset.collect), btn.dataset.name, Number(btn.dataset.balance)
+      ));
+    });
+    el.querySelectorAll('[data-history]').forEach(btn => {
+      btn.addEventListener('click', () => this.openLedgerModal(Number(btn.dataset.history)));
+    });
+  },
+
+  openCollectPaymentModal(customerId, name, balance) {
+    const settings = App.settings;
+    Modal.open(`Record Payment - ${escapeHtml(name)}`, `
+      <p style="color:var(--text-secondary);font-size:0.86rem;margin-bottom:16px">
+        Outstanding balance: <strong>${balance.toFixed(settings.currencyDecimals ?? 3)} ${escapeHtml(settings.currency || 'BHD')}</strong>
+      </p>
+      <form id="collect-form">
+        <div class="form-group">
+          <label class="form-label">Amount Received</label>
+          <input class="form-input" id="collect-amount" type="number" step="0.001" min="0.001" max="${balance}" value="${balance.toFixed(settings.currencyDecimals ?? 3)}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Payment Method</label>
+          <select class="form-select" id="collect-method">
+            <option value="cash">Cash</option>
+            <option value="card">Card</option>
+            <option value="benefitpay">BenefitPay</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center;padding:12px">Record Payment</button>
+      </form>
+    `);
+    document.getElementById('collect-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const amount = Number(document.getElementById('collect-amount').value);
+      const method = document.getElementById('collect-method').value;
+      try {
+        await Api.post(`/customers/${customerId}/collect-payment`, { amount, method });
+        Toast.success('Payment recorded - balance and accounting updated.');
+        Modal.close();
+        this.customers = await Api.get('/customers');
+        this.renderScreen();
+      } catch (err) { Toast.error(err.message); }
+    });
+  },
+
+  async openLedgerModal(customerId) {
+    const settings = App.settings;
+    let payments;
+    try {
+      payments = await Api.get(`/customers/${customerId}/payments`);
+    } catch (err) { Toast.error(err.message); return; }
+    const customer = this.customers.find(c => c.id === customerId);
+    Modal.open(`Payment History - ${escapeHtml(customer ? customer.name : '')}`, `
+      <div class="table-wrap" style="box-shadow:none">
+        <table>
+          <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Collected By</th></tr></thead>
+          <tbody>
+            ${payments.length === 0 ? `<tr><td colspan="4"><div class="empty-state"><p>No payments recorded yet.</p></div></td></tr>` : payments.map(p => `
+              <tr>
+                <td>${formatDateTime(p.createdAt)}</td>
+                <td>${Number(p.amount).toFixed(settings.currencyDecimals ?? 3)}</td>
+                <td style="text-transform:capitalize">${escapeHtml(p.method || 'cash')}</td>
+                <td>${escapeHtml(p.collectedByName || '-')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `, { large: true });
   },
 
   openImportModal() {
@@ -172,6 +298,15 @@ const CustomersScreen = {
           <label class="form-label">Address</label>
           <input class="form-input" id="c-address" value="${escapeHtml(customer?.address || '')}">
         </div>
+        <div class="form-group">
+          <label class="form-label">Credit Limit (${escapeHtml(App.settings.currency || 'BHD')})</label>
+          <input class="form-input" id="c-creditLimit" type="number" step="0.001" min="0" value="${customer?.creditLimit ?? 0}">
+          <div class="form-hint">Maximum outstanding balance this customer can carry on credit sales. Leave at 0 for no credit sales allowed.</div>
+        </div>
+        ${isEdit && customer.id !== 1 ? `
+        <div class="form-group" style="background:var(--bg);border-radius:8px;padding:10px 12px">
+          <div class="summary-row" style="margin:0"><span>Current Credit Balance</span><span style="font-weight:700;color:${(customer.balance||0)>0?'var(--danger)':'inherit'}">${(customer.balance||0).toFixed(3)} ${escapeHtml(App.settings.currency||'BHD')}</span></div>
+        </div>` : ''}
         <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center;padding:12px">
           ${isEdit ? 'Save Changes' : 'Add Customer'}
         </button>
@@ -182,7 +317,8 @@ const CustomersScreen = {
       const payload = {
         name: document.getElementById('c-name').value.trim(),
         phone: document.getElementById('c-phone').value.trim(),
-        address: document.getElementById('c-address').value.trim()
+        address: document.getElementById('c-address').value.trim(),
+        creditLimit: Number(document.getElementById('c-creditLimit').value) || 0
       };
       try {
         if (isEdit) await Api.put(`/customers/${customer.id}`, payload);

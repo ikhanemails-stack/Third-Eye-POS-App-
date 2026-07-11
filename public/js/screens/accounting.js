@@ -56,6 +56,10 @@ const AccountingScreen = {
           <div class="stat-label">Net Profit</div>
           <div class="stat-value" style="color:${this.profitLoss.netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}">${formatMoney(this.profitLoss.netProfit, settings)}</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-label">Credit Collected</div>
+          <div class="stat-value">${formatMoney(this.profitLoss.creditCollected || 0, settings)}</div>
+        </div>
       </div>
 
       <div class="tabs">
@@ -302,15 +306,16 @@ const AccountingScreen = {
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Opened</th><th>Closed</th><th>Cashier</th><th>Opening Float</th><th>Cash Sales</th><th>Expected</th><th>Counted</th><th>Difference</th></tr></thead>
+          <thead><tr><th>Opened</th><th>Closed</th><th>Cashier</th><th>Opening Float</th><th>Cash Sales</th><th>Credit Collected</th><th>Expected</th><th>Counted</th><th>Difference</th></tr></thead>
           <tbody>
-            ${this.cashSessions.length === 0 ? `<tr><td colspan="8"><div class="empty-state"><p>No sessions yet.</p></div></td></tr>` : this.cashSessions.map(s => `
+            ${this.cashSessions.length === 0 ? `<tr><td colspan="9"><div class="empty-state"><p>No sessions yet.</p></div></td></tr>` : this.cashSessions.map(s => `
               <tr>
                 <td>${formatDateTime(s.openedAt)}</td>
                 <td>${s.closedAt ? formatDateTime(s.closedAt) : '<span class="badge badge-success">Open</span>'}</td>
                 <td>${escapeHtml(s.userName || '-')}</td>
                 <td>${formatMoney(s.openingFloat, settings)}</td>
                 <td>${s.cashSalesTotal !== undefined ? formatMoney(s.cashSalesTotal, settings) : '-'}</td>
+                <td>${s.creditCollectionsTotal !== undefined ? formatMoney(s.creditCollectionsTotal, settings) : '-'}</td>
                 <td>${s.expectedCash !== undefined ? formatMoney(s.expectedCash, settings) : '-'}</td>
                 <td>${s.closingFloat !== undefined ? formatMoney(s.closingFloat, settings) : '-'}</td>
                 <td>${s.difference !== undefined ? `<span style="color:${s.difference === 0 ? 'inherit' : s.difference > 0 ? 'var(--success)' : 'var(--danger)'}">${formatMoney(s.difference, settings)}</span>` : '-'}</td>

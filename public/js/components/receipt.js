@@ -21,9 +21,12 @@ const Receipt = {
     const itemSize = base + 1;
     const totSize  = base + 4;
 
-    // Font weight — slim=400, normal=600, bold=900
+    // Font weight — slim=500, normal=700, bold=900. Raised from the previous
+    // 400/600/900 scale: thin strokes (400-600) print faded/grey on many
+    // thermal printers, especially at lower head-darkness settings, so even
+    // "Slim" now prints solidly.
     const fwKey = (settings.receiptFontWeight || 'normal').toLowerCase().trim();
-    const fw    = fwKey === 'bold' ? 900 : fwKey === 'slim' ? 400 : 600;
+    const fw    = fwKey === 'bold' ? 900 : fwKey === 'slim' ? 500 : 700;
     const fwShop = Math.min(fw + 200, 900);
 
     // Logo
@@ -57,13 +60,20 @@ const Receipt = {
 <style>
   @page { size:${isA4?'A4':`${paperPx}px auto`}; margin:${isA4?'12mm':'3mm'}; }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Courier New',Courier,monospace;font-size:${base}px;font-weight:${fw};
+  html,body{background:#fff}
+  body{font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;font-size:${base}px;font-weight:${fw};
        width:${isA4?'100%':paperPx+'px'};max-width:${isA4?'680px':'none'};
-       margin:0 auto;padding:6px;color:#000;background:#fff;-webkit-print-color-adjust:exact}
+       margin:0 auto;padding:6px;color:#000;background:#fff;
+       -webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;
+       -webkit-font-smoothing:none;-moz-osx-font-smoothing:grayscale;
+       text-rendering:optimizeLegibility}
   .divider{border:none;border-top:1.5px dashed #000;margin:7px 0}
-  .solid{border:none;border-top:2px solid #000;margin:7px 0}
+  .solid{border:none;border-top:2.5px solid #000;margin:7px 0}
   .center{text-align:center}
-  @media print{body{padding:0;margin:0}}
+  @media print{
+    body{padding:0;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    * {-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color:#000}
+  }
 </style></head><body>
 
 <div class="center">

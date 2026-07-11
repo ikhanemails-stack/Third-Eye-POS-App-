@@ -157,6 +157,9 @@ const SettingsScreen = {
                 <button type="button" class="btn btn-outline" id="preview-receipt-btn">${Icon.printer} Print Sample</button>
                 <button type="button" class="btn btn-outline" onclick="SettingsScreen.updateLivePreview()">🔄 Refresh Preview</button>
               </div>
+              <div class="form-hint" style="margin-top:8px">
+                If prints still look faded on a thermal printer after choosing Bold, check the printer's own <strong>print density / darkness</strong> setting (usually in its driver or a button combo on the printer itself) - most 80mm thermal printers ship with this set low by default to save paper/ribbon life.
+              </div>
             </div>
 
             <!-- Live Receipt Preview -->
@@ -326,8 +329,10 @@ const SettingsScreen = {
       currency: document.getElementById('s-currency').value.trim(),
       currencyDecimals: Number(document.getElementById('s-currencyDecimals').value),
       receiptFooter: document.getElementById('s-receiptFooter').value.trim(),
+      receiptHeader: document.getElementById('s-receiptHeader').value.trim(),
       receiptPaperWidth: document.getElementById('s-receiptPaperWidth').value,
       receiptFontSize: document.getElementById('s-receiptFontSize').value,
+      receiptFontWeight: document.getElementById('s-receiptFontWeight').value || 'normal',
       receiptShowLogo: document.getElementById('s-receiptShowLogo').checked,
       lowStockThreshold: Number(document.getElementById('s-lowStockThreshold').value),
       loyaltyEnabled: document.getElementById('s-loyaltyEnabled').checked,

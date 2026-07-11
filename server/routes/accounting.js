@@ -111,7 +111,18 @@ router.post('/cash-sessions/:id/close', requireLogin, (req, res) => {
     new Date(s.createdAt) >= new Date(session.openedAt)
   );
   const cashSalesTotal = roundMoney(sales.reduce((sum, s) => sum + s.total, 0), 3);
-  const expectedCash = roundMoney(session.openingFloat + cashSalesTotal, 3);
+
+  // Credit balance payments collected in cash by this cashier during the
+  // session also sit in the physical drawer, so they count toward the
+  // expected cash total too.
+  const creditCollections = db.filter('customer_payments', p =>
+    p.collectedBy === session.userId &&
+    (p.method || 'cash') === 'cash' &&
+    new Date(p.createdAt) >= new Date(session.openedAt)
+  );
+  const creditCollectionsTotal = roundMoney(creditCollections.reduce((sum, p) => sum + p.amount, 0), 3);
+
+  const expectedCash = roundMoney(session.openingFloat + cashSalesTotal + creditCollectionsTotal, 3);
   const closingFloat = Number(req.body.closingFloat) || 0;
   const difference = roundMoney(closingFloat - expectedCash, 3);
 
@@ -119,6 +130,7 @@ router.post('/cash-sessions/:id/close', requireLogin, (req, res) => {
     status: 'closed',
     closedAt: new Date().toISOString(),
     cashSalesTotal,
+    creditCollectionsTotal,
     expectedCash,
     closingFloat,
     difference
@@ -155,9 +167,19 @@ router.get('/accounting/profit-loss', requireLogin, (req, res) => {
   const grossProfit = roundMoney(revenue - cogs, 3);
   const netProfit = roundMoney(grossProfit - totalExpenses, 3);
 
+  // Credit collected in this period - informational only. It is NOT added
+  // to revenue: the sale already counted as revenue on the day it happened
+  // (even if sold on credit). This just shows how much of that outstanding
+  // credit was actually paid off in the period.
+  const creditCollected = roundMoney(
+    db.all('customer_payments')
+      .filter(p => new Date(p.createdAt) >= fromDate && new Date(p.createdAt) <= toDate)
+      .reduce((sum, p) => sum + p.amount, 0), 3
+  );
+
   res.json({
     period: { from: fromDate.toISOString(), to: toDate.toISOString() },
-    revenue, cogs, grossProfit, totalExpenses, netProfit, vatCollected,
+    revenue, cogs, grossProfit, totalExpenses, netProfit, vatCollected, creditCollected,
     salesCount: sales.length
   });
 });

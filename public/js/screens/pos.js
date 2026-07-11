@@ -202,19 +202,36 @@ const PosScreen = {
   },
 
   // Camera-based barcode scanning for devices without a hardware scanner
-  // (phones, tablets, laptop webcams). Uses the browser's native
-  // BarcodeDetector API where available (Chrome/Edge/Android) - no external
-  // library or internet connection needed to scan. On browsers that don't
-  // support it yet (notably Safari/iOS as of this writing), shows a clear
-  // message instead of a broken camera view.
+  // (phones, tablets, laptop webcams).
+  // - Chrome/Edge/Android: uses the browser's native BarcodeDetector API -
+  //   no external library needed, fastest path.
+  // - Safari/iPhone/iPad (and any other browser without BarcodeDetector):
+  //   falls back to the vendored ZXing library, which decodes barcodes
+  //   from the live camera feed entirely in JS. This is what makes
+  //   scanning work on iPhones.
+  // Either way requires HTTPS (or localhost) for camera access - iOS Safari
+  // will refuse getUserMedia on a plain http:// site.
   async openCameraScanModal() {
-    if (!('BarcodeDetector' in window)) {
+    const hasNativeDetector = 'BarcodeDetector' in window;
+    const hasZXing = typeof ZXing !== 'undefined';
+
+    if (!hasNativeDetector && !hasZXing) {
       Modal.open('Camera Scan Not Supported', `
         <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.5">
-          This browser doesn't support camera-based barcode scanning yet
-          (this feature currently works on Chrome, Edge, and most Android
-          browsers). You can still use a USB/Bluetooth barcode scanner, or
-          type the barcode directly into the search box.
+          This browser doesn't support camera-based barcode scanning. You can
+          still use a USB/Bluetooth barcode scanner, or type the barcode
+          directly into the search box.
+        </p>
+      `);
+      return;
+    }
+
+    if (location.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(location.hostname)) {
+      Modal.open('Camera Needs a Secure Connection', `
+        <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.5">
+          Camera scanning (especially on iPhone) only works over HTTPS. Please
+          access this site using an <strong>https://</strong> address, or use
+          a USB/Bluetooth barcode scanner instead.
         </p>
       `);
       return;
@@ -229,23 +246,28 @@ const PosScreen = {
         Point the camera at a barcode. It will be added to the cart automatically.
       </p>
       <div id="camera-scan-error" style="color:var(--danger-600,#c0392b);font-size:0.82rem;text-align:center;margin-top:6px"></div>
+      ${!hasNativeDetector && hasZXing ? `<p style="color:var(--text-muted);font-size:0.72rem;text-align:center;margin-top:4px">Using compatibility scan mode for this browser.</p>` : ''}
     `);
 
     const video = document.getElementById('camera-scan-video');
     const errorBox = document.getElementById('camera-scan-error');
     let stream = null;
     let stopped = false;
-    let detector;
-    try {
-      detector = new BarcodeDetector({
-        formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code']
-      });
-    } catch (e) {
-      detector = new BarcodeDetector();
-    }
+    let zxingReader = null;
+
+    const onResult = (value) => {
+      if (stopped) return;
+      stop();
+      Modal.close();
+      this.searchTerm = value;
+      const input = document.getElementById('pos-search');
+      if (input) input.value = value;
+      this.handleBarcodeEnter();
+    };
 
     const stop = () => {
       stopped = true;
+      if (zxingReader) { try { zxingReader.reset(); } catch (e) {} }
       if (stream) stream.getTracks().forEach(t => t.stop());
     };
     // Stop the camera whenever the modal is closed (X button, backdrop click,
@@ -258,32 +280,68 @@ const PosScreen = {
       observer.observe(document.body, { childList: true });
     }
 
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      video.srcObject = stream;
-    } catch (e) {
-      errorBox.textContent = 'Could not access the camera. Please check camera permissions for this site.';
+    // Prefer the native API when present (faster, no library overhead).
+    if (hasNativeDetector) {
+      let detector;
+      try {
+        detector = new BarcodeDetector({
+          formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code']
+        });
+      } catch (e) {
+        detector = new BarcodeDetector();
+      }
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = stream;
+      } catch (e) {
+        errorBox.textContent = 'Could not access the camera. Please check camera permissions for this site.';
+        return;
+      }
+
+      const scanLoop = async () => {
+        if (stopped) return;
+        try {
+          const codes = await detector.detect(video);
+          if (codes.length > 0) { onResult(codes[0].rawValue); return; }
+        } catch (e) { /* keep trying */ }
+        if (!stopped) requestAnimationFrame(scanLoop);
+      };
+      video.addEventListener('loadedmetadata', () => scanLoop());
       return;
     }
 
-    const scanLoop = async () => {
-      if (stopped) return;
-      try {
-        const codes = await detector.detect(video);
-        if (codes.length > 0) {
-          const value = codes[0].rawValue;
-          stop();
-          Modal.close();
-          this.searchTerm = value;
-          const input = document.getElementById('pos-search');
-          if (input) input.value = value;
-          this.handleBarcodeEnter();
-          return;
+    // Fallback for iPhone/Safari and any other browser without
+    // BarcodeDetector: ZXing decodes frames from the video element itself.
+    try {
+      const hints = new Map();
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+        ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E,
+        ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39,
+        ZXing.BarcodeFormat.QR_CODE
+      ]);
+      zxingReader = new ZXing.BrowserMultiFormatReader(hints);
+      const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
+      // Prefer a rear/back camera on phones when the label makes it obvious;
+      // otherwise let ZXing pick the default (usually the back camera on iOS
+      // when constraints request environment facing).
+      const backCam = devices.find(d => /back|rear|environment/i.test(d.label));
+      const deviceId = backCam ? backCam.deviceId : (devices[0] && devices[0].deviceId);
+
+      await zxingReader.decodeFromConstraints(
+        { video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: 'environment' } } },
+        video,
+        (result, err) => {
+          if (stopped) return;
+          if (result) onResult(result.getText());
+          // NotFoundException fires continuously while no code is in view -
+          // that's expected and not an error to surface to the cashier.
         }
-      } catch (e) { /* keep trying */ }
-      if (!stopped) requestAnimationFrame(scanLoop);
-    };
-    video.addEventListener('loadedmetadata', () => scanLoop());
+      );
+    } catch (e) {
+      errorBox.textContent = 'Could not access the camera. Please check camera permissions for this site (iPhone: Settings > Safari > Camera, or tap the "aA" icon in the address bar > Website Settings).';
+    }
   },
 
   handleBarcodeEnter() {
@@ -713,6 +771,7 @@ const PosScreen = {
       }
       try {
         const sale = await Api.post('/sales', payload);
+        const soldToCustomer = this.customers.find(c => c.id === this.selectedCustomerId);
         Modal.close();
         this.cart = [];
         this.appliedCoupon = null;
@@ -722,9 +781,37 @@ const PosScreen = {
         this.renderScreen();
         this.focusSearch();
         Toast.success(`Sale completed: ${sale.invoiceNo}${sale.delivery ? ' - delivery order created' : ''}`);
+        this.offerWhatsAppReceipt(sale, soldToCustomer);
       } catch (err) {
         Toast.error(err.message);
       }
+    });
+  },
+
+  // After checkout, offer to send the customer their receipt as a PDF on
+  // WhatsApp. Skipped for plain walk-ins with no customer selected — there's
+  // no phone number to send to.
+  offerWhatsAppReceipt(sale, customer) {
+    if (!customer || customer.id === 1) return;
+    Modal.open('Send Receipt on WhatsApp?', `
+      <p style="color:var(--text-secondary);font-size:0.86rem;margin-bottom:16px">
+        Send <strong>${escapeHtml(customer.name)}</strong> a PDF copy of invoice
+        <strong>${escapeHtml(sale.invoiceNo)}</strong> on WhatsApp.
+      </p>
+      <div class="form-group">
+        <label class="form-label">WhatsApp Number</label>
+        <input class="form-input" id="wa-phone-input" value="${escapeHtml(customer.phone || '')}" placeholder="e.g. 33334444">
+        <div class="form-hint">8-digit Bahrain numbers are sent with the +973 code automatically.</div>
+      </div>
+      <button class="btn btn-gold" id="wa-send-btn" style="width:100%;justify-content:center;padding:12px;gap:8px">
+        <span style="width:18px;height:18px;display:flex">${Icon.whatsapp}</span> Send on WhatsApp
+      </button>
+    `);
+    document.getElementById('wa-send-btn').addEventListener('click', async (e) => {
+      const phone = document.getElementById('wa-phone-input').value.trim();
+      e.target.disabled = true;
+      await BillShare.shareToWhatsApp(sale, App.settings, phone);
+      Modal.close();
     });
   },
 

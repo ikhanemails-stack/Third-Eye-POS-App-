@@ -124,6 +124,7 @@ const SalesHistoryScreen = {
                 <td style="text-align:right;white-space:nowrap">
                   <div class="row-actions-group">
                     <button class="row-action row-action-view view-sale-btn" data-id="${s.id}" title="View">${Icon.box}</button>
+                    <button class="row-action row-action-adjust whatsapp-sale-btn" data-id="${s.id}" title="Send Receipt on WhatsApp">${Icon.whatsapp}</button>
                     ${s.status !== 'refunded' && s.orderType !== 'delivery' ? `<button class="row-action row-action-adjust transfer-delivery-btn" data-id="${s.id}" title="Transfer to Delivery">${Icon.truck}</button>` : ''}
                     ${s.status !== 'refunded' ? `<button class="row-action row-action-delete refund-sale-btn" data-id="${s.id}" title="Refund">${Icon.x}</button>` : ''}
                   </div>
@@ -160,6 +161,39 @@ const SalesHistoryScreen = {
     });
     document.querySelectorAll('.transfer-delivery-btn').forEach(btn => {
       btn.addEventListener('click', () => this.openTransferModal(this.sales.find(s => s.id === Number(btn.dataset.id))));
+    });
+    document.querySelectorAll('.whatsapp-sale-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.openWhatsAppModal(Number(btn.dataset.id)));
+    });
+  },
+
+  async openWhatsAppModal(id) {
+    let sale, customer = null;
+    try {
+      sale = await Api.get(`/sales/${id}`);
+      if (sale.customerId) {
+        const all = await Api.get('/customers');
+        customer = all.find(c => c.id === sale.customerId);
+      }
+    } catch (err) { Toast.error(err.message); return; }
+    Modal.open('Send Receipt on WhatsApp', `
+      <p style="color:var(--text-secondary);font-size:0.86rem;margin-bottom:16px">
+        Send invoice <strong>${escapeHtml(sale.invoiceNo)}</strong> as a PDF on WhatsApp.
+      </p>
+      <div class="form-group">
+        <label class="form-label">WhatsApp Number</label>
+        <input class="form-input" id="wa-phone-input" value="${escapeHtml(customer?.phone || '')}" placeholder="e.g. 33334444">
+        <div class="form-hint">8-digit Bahrain numbers are sent with the +973 code automatically.</div>
+      </div>
+      <button class="btn btn-gold" id="wa-send-btn" style="width:100%;justify-content:center;padding:12px;gap:8px">
+        <span style="width:18px;height:18px;display:flex">${Icon.whatsapp}</span> Send on WhatsApp
+      </button>
+    `);
+    document.getElementById('wa-send-btn').addEventListener('click', async (e) => {
+      const phone = document.getElementById('wa-phone-input').value.trim();
+      e.target.disabled = true;
+      await BillShare.shareToWhatsApp(sale, App.settings, phone);
+      Modal.close();
     });
   },
 

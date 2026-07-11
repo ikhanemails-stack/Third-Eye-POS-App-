@@ -60,19 +60,43 @@ router.put('/customers/:id', requireLogin, (req, res) => {
 });
 
 // Record a payment that reduces a customer's outstanding credit balance
-// (e.g. they come in and pay off part or all of what they owe).
+// (e.g. they come in and pay off part or all of what they owe). This is
+// the "Payment Received" action for the Credit module - it updates the
+// customer's balance immediately and logs a record that also feeds the
+// Accounting module (cash drawer reconciliation) when collected in cash.
 router.post('/customers/:id/collect-payment', requireLogin, (req, res) => {
   const customer = db.getById('customers', req.params.id);
   if (!customer) return res.status(404).json({ error: 'Customer not found.' });
   const amount = roundMoney(Number(req.body.amount) || 0, 3);
   if (amount <= 0) return res.status(400).json({ error: 'Enter a payment amount greater than zero.' });
+  const method = ['cash', 'card', 'benefitpay'].includes(req.body.method) ? req.body.method : 'cash';
   const newBalance = roundMoney(Math.max(0, (customer.balance || 0) - amount), 3);
   const updated = db.update('customers', customer.id, { balance: newBalance });
-  db.insert('customer_payments', {
-    customerId: customer.id, customerName: customer.name, amount,
-    collectedBy: req.session.userName, createdAt: new Date().toISOString()
+  const payment = db.insert('customer_payments', {
+    customerId: customer.id, customerName: customer.name, amount, method,
+    collectedBy: req.session.userId, collectedByName: req.session.userName,
+    createdAt: new Date().toISOString()
   });
-  res.json(updated);
+  res.json({ ...updated, payment });
+});
+
+// Full payment history for one customer - the "credit ledger" the Customers
+// screen shows per customer (how much they've paid off, and when).
+router.get('/customers/:id/payments', requireLogin, (req, res) => {
+  const payments = db.filter('customer_payments', p => p.customerId === Number(req.params.id));
+  payments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  res.json(payments);
+});
+
+// Recent payments across all customers, optionally date-scoped - used by
+// the Accounting module to fold credit collections into daily cash totals.
+router.get('/customer-payments', requireLogin, (req, res) => {
+  const { from, to } = req.query;
+  let payments = db.all('customer_payments');
+  if (from) payments = payments.filter(p => new Date(p.createdAt) >= new Date(from));
+  if (to) payments = payments.filter(p => new Date(p.createdAt) <= new Date(to));
+  payments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  res.json(payments);
 });
 
 // Credit customers overview - used by the Dashboard "Credit Customers" card.
