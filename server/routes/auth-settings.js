@@ -107,6 +107,16 @@ router.put('/auth/change-password', requireLogin, async (req, res) => {
 
 // ── SETTINGS ──────────────────────────────────────────────────────────────
 
+// ── COUNTRY / VAT CONFIG (for the Settings screen's country dropdown) ─────
+// Read-only reference data - lets the frontend auto-fill VAT rate, currency,
+// VAT label and whether a ZATCA QR is required, whenever the admin picks a
+// different country. See server/tax-config.js for the full explanation and
+// accuracy notes (e.g. Qatar/Kuwait VAT not yet in force).
+router.get('/tax-config', requireLogin, (req, res) => {
+  const { COUNTRY_TAX_CONFIG } = require('../tax-config');
+  res.json(COUNTRY_TAX_CONFIG);
+});
+
 router.get('/settings', requireLogin, async (req, res) => {
   try {
     const all = await Promise.resolve(db.all('settings'));

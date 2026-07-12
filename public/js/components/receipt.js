@@ -82,7 +82,7 @@ const Receipt = {
   ${settings.address?`<div style="font-size:${base}px">${escapeHtmlR(settings.address)}</div>`:''}
   ${settings.phone?`<div style="font-size:${base}px">Tel: ${escapeHtmlR(settings.phone)}</div>`:''}
   ${settings.crNumber?`<div style="font-size:${base}px">CR: ${escapeHtmlR(settings.crNumber)}</div>`:''}
-  ${settings.vatNumber?`<div style="font-size:${base}px">VAT No: ${escapeHtmlR(settings.vatNumber)}</div>`:''}
+  ${settings.vatNumber?`<div style="font-size:${base}px">${escapeHtmlR(settings.vatLabel||'VAT')} No: ${escapeHtmlR(settings.vatNumber)}</div>`:''}
   ${headerHtml}
   <div style="display:inline-block;border:2px solid #000;border-radius:20px;padding:3px 16px;font-size:${base}px;font-weight:${fwShop};margin:6px 0 4px;letter-spacing:1px">${((sale.orderType||'walk_in').replace(/_/g,'-')).toUpperCase()}</div>
 </div>
@@ -97,7 +97,7 @@ ${itemsHtml}
 
 <hr class="divider">
 <div style="display:flex;justify-content:space-between;font-size:${base}px;margin:3px 0"><span>Subtotal:</span><span>${fmtMoney(sale.subtotal,settings)}</span></div>
-<div style="display:flex;justify-content:space-between;font-size:${base}px;margin:3px 0"><span>VAT (${settings.vatRate||0}%):</span><span>${fmtMoney(sale.vatTotal,settings)}</span></div>
+<div style="display:flex;justify-content:space-between;font-size:${base}px;margin:3px 0"><span>${escapeHtmlR(settings.vatLabel||'VAT')} (${settings.vatRate||0}%):</span><span>${fmtMoney(sale.vatTotal,settings)}</span></div>
 ${(sale.discount||0)>0?`<div style="display:flex;justify-content:space-between;font-size:${base}px;margin:3px 0"><span>Discount${sale.couponCode?' ('+sale.couponCode+')':''}:</span><span>-${fmtMoney(sale.discount,settings)}</span></div>`:''}
 <hr class="solid">
 <div style="display:flex;justify-content:space-between;font-size:${totSize}px;font-weight:${fwShop};padding:6px 0">
@@ -108,6 +108,12 @@ ${(sale.discount||0)>0?`<div style="display:flex;justify-content:space-between;f
 ${(sale.changeDue||0)>0?`<div style="display:flex;justify-content:space-between;font-size:${base}px;margin:3px 0"><span>Change:</span><span>${fmtMoney(sale.changeDue,settings)}</span></div>`:''}
 ${sale.pointsEarned?`<div style="display:flex;justify-content:space-between;font-size:${base}px;margin:3px 0"><span>Points Earned:</span><span>+${sale.pointsEarned} pts</span></div>`:''}
 <hr class="divider">
+${settings.requiresZatcaQr ? `
+<div class="center" style="margin:8px 0">
+  <div style="font-size:${base-1}px;font-weight:${fw};margin-bottom:4px">Simplified Tax Invoice (ZATCA)</div>
+  <div style="display:inline-block;padding:6px;background:#fff">${(typeof Zatca!=='undefined'?Zatca.buildQrSvgForSale(sale,settings):'')}</div>
+</div>
+<hr class="divider">` : ''}
 <div class="center" style="font-size:${base}px;font-weight:${fw};margin-top:6px;white-space:pre-line">${escapeHtmlR(settings.receiptFooter||'Thank you for shopping with us!')}</div>
 </body></html>`;
   },

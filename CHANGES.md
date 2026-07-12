@@ -69,3 +69,23 @@ existing Express server and the browser's built-in `fetch`/camera APIs).
   so there are no CORS issues and no API keys are exposed to customers.
 - Nothing in `admin-app` needed changes — it only manages licenses/clients,
   not products.
+
+## GCC Country / VAT / ZATCA update
+
+- Settings screen now has a **Country** dropdown (Bahrain, Saudi Arabia, UAE, Oman, Qatar, Kuwait).
+  Picking a country auto-fills VAT rate, currency, currency decimals, and the VAT label shown on receipts.
+  The admin can still edit the VAT rate manually afterwards if a special case applies.
+- New `server/tax-config.js` is the single source of truth for each country's VAT rate/label/authority.
+  Exposed at `GET /api/tax-config`.
+- Saudi Arabia: every receipt automatically prints a **ZATCA Phase 1 "Simplified Tax Invoice" QR code**
+  (Base64 TLV: seller name, VAT number, timestamp, invoice total, VAT total), using the QR library already
+  bundled in this app (`public/js/vendor/qrcode.js`). See `public/js/components/zatca.js` for full details
+  and honest limitations (ZATCA Phase 2 real-time reporting requires the business to onboard directly with
+  ZATCA and is outside what any code package can complete on its own).
+- Qatar and Kuwait: VAT rate is deliberately set to 0% because neither country has implemented VAT yet
+  (checked July 2026). Update `server/tax-config.js` the day either country's tax authority formally
+  launches VAT.
+- Known follow-up (not yet done): several screens still hard-code "(BHD)" in field labels
+  (Delivery Fee, Salary, Cost Price, Credit Limit, etc.) instead of reading `settings.currency`
+  dynamically - fine for a Bahrain-only shop, but should be generalized before selling this same
+  build into Saudi/UAE/Oman shops. Ask for this as a next update if needed.
