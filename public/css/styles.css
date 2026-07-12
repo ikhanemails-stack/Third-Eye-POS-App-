@@ -1076,7 +1076,7 @@ body[data-theme="dark"] .table-wrap table tbody tr:hover { background: #2a2a2a; 
   opacity: 0.6;
 }
 
-/* ── Order Pad (global floating quick-order widget) ───────────────────── */
+/* ── Quick Cart (global floating quick-order widget, draggable) ────────── */
 .order-pad-fab {
   position: fixed;
   top: 16px;
@@ -1092,11 +1092,20 @@ body[data-theme="dark"] .table-wrap table tbody tr:hover { background: #2a2a2a; 
   color: #fff;
   font-weight: 700;
   font-size: 0.85rem;
-  cursor: pointer;
+  cursor: grab;
   box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  touch-action: none;
+  user-select: none;
 }
-.order-pad-fab:hover { transform: translateY(-1px); }
+.order-pad-fab:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(79, 70, 229, 0.45); }
+.order-pad-fab:active { cursor: grabbing; }
+@keyframes orderPadFabEnter {
+  0%   { transform: scale(0.4) translateY(-14px); opacity: 0; }
+  60%  { transform: scale(1.08) translateY(2px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.order-pad-fab-enter { animation: orderPadFabEnter 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .order-pad-badge {
   background: var(--danger, #D14545);
   color: #fff;
@@ -1123,6 +1132,11 @@ body[data-theme="dark"] .table-wrap table tbody tr:hover { background: #2a2a2a; 
   border-radius: 14px;
   box-shadow: 0 18px 40px rgba(0,0,0,0.22);
   border: 1px solid var(--border, rgba(0,0,0,0.08));
+  animation: orderPadPanelEnter 0.18s ease-out;
+}
+@keyframes orderPadPanelEnter {
+  from { transform: translateY(-6px) scale(0.98); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
 }
 .order-pad-header {
   display: flex;

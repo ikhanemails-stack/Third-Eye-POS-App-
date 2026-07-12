@@ -59,22 +59,117 @@ const OrderPad = {
     let fab = document.getElementById('order-pad-fab');
     const count = this.badgeCount();
     const html = `
-      <span style="width:16px;height:16px;display:flex">${Icon.orderpad}</span> Order Pad
+      <span style="width:16px;height:16px;display:flex">${Icon.orderpad}</span> Quick Cart
       ${count > 0 ? `<span class="order-pad-badge">${count}</span>` : ''}
     `;
     if (!fab) {
       fab = document.createElement('button');
       fab.id = 'order-pad-fab';
-      fab.className = 'order-pad-fab';
+      fab.className = 'order-pad-fab order-pad-fab-enter';
       document.getElementById('order-pad-host').appendChild(fab);
-      fab.addEventListener('click', () => this.toggle());
+      this.restoreFabPosition(fab);
+      this.makeDraggable(fab);
+      fab.addEventListener('click', (e) => {
+        if (fab.dataset.dragged === '1') { fab.dataset.dragged = '0'; return; }
+        this.toggle();
+      });
+      setTimeout(() => fab.classList.remove('order-pad-fab-enter'), 500);
     }
     fab.innerHTML = html;
+  },
+
+  // Remember where the cashier last dragged the Quick Cart button so it
+  // doesn't jump back to the default corner every time the screen changes.
+  restoreFabPosition(fab) {
+    try {
+      const saved = JSON.parse(localStorage.getItem('quickCartFabPos') || 'null');
+      if (saved && typeof saved.top === 'number' && typeof saved.left === 'number') {
+        fab.style.top = saved.top + 'px';
+        fab.style.left = saved.left + 'px';
+        fab.style.right = 'auto';
+      }
+    } catch (e) { /* ignore malformed saved position */ }
+  },
+
+  // Press-and-drag support (mouse + touch) so the cashier can move the
+  // button out of the way of anything it's covering. A short drag (a real
+  // tap, not a move) still opens/closes the panel as before.
+  makeDraggable(fab) {
+    let startX, startY, startTop, startLeft, dragging = false;
+
+    const onMove = (clientX, clientY) => {
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+      if (!dragging && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) dragging = true;
+      if (!dragging) return;
+      fab.dataset.dragged = '1';
+      const maxLeft = window.innerWidth - fab.offsetWidth - 4;
+      const maxTop = window.innerHeight - fab.offsetHeight - 4;
+      const newLeft = Math.min(Math.max(4, startLeft + dx), maxLeft);
+      const newTop = Math.min(Math.max(4, startTop + dy), maxTop);
+      fab.style.left = newLeft + 'px';
+      fab.style.top = newTop + 'px';
+      fab.style.right = 'auto';
+    };
+
+    const onEnd = () => {
+      document.removeEventListener('mousemove', mouseMoveHandler);
+      document.removeEventListener('mouseup', mouseUpHandler);
+      document.removeEventListener('touchmove', touchMoveHandler);
+      document.removeEventListener('touchend', touchUpHandler);
+      if (dragging) {
+        try {
+          localStorage.setItem('quickCartFabPos', JSON.stringify({
+            top: parseInt(fab.style.top, 10), left: parseInt(fab.style.left, 10)
+          }));
+        } catch (e) { /* storage may be unavailable */ }
+      }
+    };
+
+    const mouseMoveHandler = (e) => onMove(e.clientX, e.clientY);
+    const mouseUpHandler = () => onEnd();
+    const touchMoveHandler = (e) => { if (e.touches[0]) onMove(e.touches[0].clientX, e.touches[0].clientY); };
+    const touchUpHandler = () => onEnd();
+
+    const start = (clientX, clientY) => {
+      dragging = false;
+      fab.dataset.dragged = '0';
+      const rect = fab.getBoundingClientRect();
+      startX = clientX; startY = clientY;
+      startTop = rect.top; startLeft = rect.left;
+    };
+
+    fab.addEventListener('mousedown', (e) => {
+      start(e.clientX, e.clientY);
+      document.addEventListener('mousemove', mouseMoveHandler);
+      document.addEventListener('mouseup', mouseUpHandler);
+    });
+    fab.addEventListener('touchstart', (e) => {
+      if (!e.touches[0]) return;
+      start(e.touches[0].clientX, e.touches[0].clientY);
+      document.addEventListener('touchmove', touchMoveHandler, { passive: true });
+      document.addEventListener('touchend', touchUpHandler);
+    }, { passive: true });
   },
 
   closePanel() {
     const panel = document.getElementById('order-pad-panel');
     if (panel) panel.remove();
+  },
+
+  positionPanel(panel) {
+    const fab = document.getElementById('order-pad-fab');
+    if (!fab || window.innerWidth <= 900) return; // mobile CSS handles its own fixed position
+    const rect = fab.getBoundingClientRect();
+    const panelWidth = 340;
+    let left = rect.left;
+    if (left + panelWidth > window.innerWidth - 16) left = window.innerWidth - panelWidth - 16;
+    if (left < 16) left = 16;
+    let top = rect.bottom + 8;
+    if (top + 400 > window.innerHeight) top = Math.max(16, rect.top - 8 - 400);
+    panel.style.top = top + 'px';
+    panel.style.left = left + 'px';
+    panel.style.right = 'auto';
   },
 
   renderPanel() {
@@ -88,11 +183,12 @@ const OrderPad = {
     const panel = document.createElement('div');
     panel.id = 'order-pad-panel';
     panel.className = 'order-pad-panel';
+    this.positionPanel(panel);
     panel.innerHTML = `
       <div class="order-pad-header">
         <div style="display:flex;align-items:center;gap:8px">
           <span style="width:16px;height:16px;display:flex">${Icon.orderpad}</span>
-          <strong>Quick Order Pad</strong>
+          <strong>Quick Cart</strong>
         </div>
         <button class="order-pad-close" id="op-close-btn">
           <span style="width:16px;height:16px;display:flex">${Icon.x}</span>
@@ -247,7 +343,7 @@ const OrderPad = {
   async convertToInvoice(order) {
     if (order.items.length === 0) { Toast.error('Add at least one product first.'); return; }
     try {
-      const notes = order.customerName ? `Order Pad - ${order.customerName}${order.notes ? ' / ' + order.notes : ''}` : (order.notes || '');
+      const notes = order.customerName ? `Quick Cart - ${order.customerName}${order.notes ? ' / ' + order.notes : ''}` : (order.notes || '');
       const sale = await Api.post('/sales', {
         items: order.items.map(i => ({ productId: i.productId, quantity: i.qty, unitPrice: i.price })),
         paymentMethod: 'cash',

@@ -295,7 +295,7 @@ const PosScreen = {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         video.srcObject = stream;
       } catch (e) {
-        errorBox.textContent = 'Could not access the camera. Please check camera permissions for this site.';
+        errorBox.textContent = this.cameraErrorMessage(e);
         return;
       }
 
@@ -340,8 +340,29 @@ const PosScreen = {
         }
       );
     } catch (e) {
-      errorBox.textContent = 'Could not access the camera. Please check camera permissions for this site (iPhone: Settings > Safari > Camera, or tap the "aA" icon in the address bar > Website Settings).';
+      errorBox.textContent = this.cameraErrorMessage(e);
     }
+  },
+
+  // Turns a getUserMedia/camera error into an actionable message instead of
+  // one generic string - the fix is different depending on what actually
+  // went wrong (permission blocked vs. no camera vs. camera busy vs. the
+  // page isn't loaded over HTTPS).
+  cameraErrorMessage(e) {
+    const name = (e && e.name) || '';
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+      return 'Camera permission was blocked for this site. On iPhone: Settings > Safari > Camera (or tap the "aA" icon in the address bar > Website Settings) and allow it, then reload. On a laptop: click the camera/lock icon in the address bar and allow camera access, then reload.';
+    }
+    if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+      return 'No camera was found on this device. Use a USB/Bluetooth barcode scanner, or type the barcode into the search box instead.';
+    }
+    if (name === 'NotReadableError' || name === 'TrackStartError') {
+      return 'The camera is already in use by another app or browser tab. Close it there, then try scanning again.';
+    }
+    if (name === 'SecurityError' || (location.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(location.hostname))) {
+      return 'Camera access needs a secure (https://) connection. If you\'re opening this on a local network address (like an IP starting with 192.168.), switch to the https:// web address instead.';
+    }
+    return 'Could not access the camera. Please check camera permissions for this site and try again.';
   },
 
   handleBarcodeEnter() {

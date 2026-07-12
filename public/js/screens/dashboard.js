@@ -133,6 +133,55 @@ const DashboardScreen = {
         </div>
       </div>
 
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:14px">📊 Live Reports</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:0" class="dash-two-col">
+        <div class="card-flat">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <h3 style="font-size:1rem;font-weight:600">💳 Credit Customers</h3>
+            <a href="#/customers" class="btn btn-ghost btn-sm">View All</a>
+          </div>
+          ${summary.creditCustomers.top.length === 0 ? `<div class="empty-state" style="padding:30px"><p>No customers currently owe a balance.</p></div>` : `
+          <div class="table-wrap" style="box-shadow:none">
+            <table>
+              <thead><tr><th>Customer</th><th>Balance</th><th>Limit %</th><th></th></tr></thead>
+              <tbody>
+                ${summary.creditCustomers.top.map(c => `
+                  <tr>
+                    <td>${escapeHtml(c.name)}${c.phone ? `<div style="font-size:0.72rem;color:var(--text-muted)">${escapeHtml(c.phone)}</div>` : ''}</td>
+                    <td><span class="money" style="color:var(--danger);font-weight:700">${c.balance.toFixed(settings.currencyDecimals ?? 3)}</span></td>
+                    <td>${c.pctOfLimit !== null ? `<span class="badge ${c.pctOfLimit >= 90 ? 'badge-danger' : 'badge-warning'}">${c.pctOfLimit}%</span>` : `<span style="color:var(--text-muted);font-size:0.78rem">no limit</span>`}</td>
+                    <td><button class="btn btn-ghost btn-sm" data-collect-customer="${c.id}" data-customer-name="${escapeHtml(c.name)}" data-customer-balance="${c.balance}">Record Payment</button></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>`}
+        </div>
+
+        <div class="card-flat">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <h3 style="font-size:1rem;font-weight:600">🚚 Unpaid Deliveries</h3>
+            <a href="#/delivery" class="btn btn-ghost btn-sm">View All</a>
+          </div>
+          ${summary.unpaidDeliveries.list.length === 0 ? `<div class="empty-state" style="padding:30px"><p>✅ All deliveries collected.</p></div>` : `
+          <div class="table-wrap" style="box-shadow:none">
+            <table>
+              <thead><tr><th>Customer</th><th>Address</th><th>Amount</th><th></th></tr></thead>
+              <tbody>
+                ${summary.unpaidDeliveries.list.map(d => `
+                  <tr>
+                    <td>${escapeHtml(d.customerName || 'Walk-in')}</td>
+                    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(d.address || '')}</td>
+                    <td><span class="money" style="color:var(--danger);font-weight:700">${d.outstandingAmount.toFixed(settings.currencyDecimals ?? 3)}</span></td>
+                    <td><button class="btn btn-ghost btn-sm" data-collect-delivery="${d.id}">Mark Collected</button></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>`}
+        </div>
+      </div>
+
       <div class="stat-grid">
         ${m.revenue ? `
         <div class="stat-card accent">
@@ -246,53 +295,6 @@ const DashboardScreen = {
         </div>`}
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px" class="dash-two-col">
-        <div class="card-flat">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-            <h3 style="font-size:1rem;font-weight:600">💳 Credit Customers</h3>
-            <a href="#/customers" class="btn btn-ghost btn-sm">View All</a>
-          </div>
-          ${summary.creditCustomers.top.length === 0 ? `<div class="empty-state" style="padding:30px"><p>No customers currently owe a balance.</p></div>` : `
-          <div class="table-wrap" style="box-shadow:none">
-            <table>
-              <thead><tr><th>Customer</th><th>Balance</th><th>Limit %</th><th></th></tr></thead>
-              <tbody>
-                ${summary.creditCustomers.top.map(c => `
-                  <tr>
-                    <td>${escapeHtml(c.name)}${c.phone ? `<div style="font-size:0.72rem;color:var(--text-muted)">${escapeHtml(c.phone)}</div>` : ''}</td>
-                    <td><span class="money" style="color:var(--danger);font-weight:700">${c.balance.toFixed(settings.currencyDecimals ?? 3)}</span></td>
-                    <td>${c.pctOfLimit !== null ? `<span class="badge ${c.pctOfLimit >= 90 ? 'badge-danger' : 'badge-warning'}">${c.pctOfLimit}%</span>` : `<span style="color:var(--text-muted);font-size:0.78rem">no limit</span>`}</td>
-                    <td><button class="btn btn-ghost btn-sm" data-collect-customer="${c.id}" data-customer-name="${escapeHtml(c.name)}" data-customer-balance="${c.balance}">Record Payment</button></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>`}
-        </div>
-
-        <div class="card-flat">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-            <h3 style="font-size:1rem;font-weight:600">🚚 Unpaid Deliveries</h3>
-            <a href="#/delivery" class="btn btn-ghost btn-sm">View All</a>
-          </div>
-          ${summary.unpaidDeliveries.list.length === 0 ? `<div class="empty-state" style="padding:30px"><p>✅ All deliveries collected.</p></div>` : `
-          <div class="table-wrap" style="box-shadow:none">
-            <table>
-              <thead><tr><th>Customer</th><th>Address</th><th>Amount</th><th></th></tr></thead>
-              <tbody>
-                ${summary.unpaidDeliveries.list.map(d => `
-                  <tr>
-                    <td>${escapeHtml(d.customerName || 'Walk-in')}</td>
-                    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(d.address || '')}</td>
-                    <td><span class="money" style="color:var(--danger);font-weight:700">${d.outstandingAmount.toFixed(settings.currencyDecimals ?? 3)}</span></td>
-                    <td><button class="btn btn-ghost btn-sm" data-collect-delivery="${d.id}">Mark Collected</button></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>`}
-        </div>
-      </div>
     `;
     document.getElementById('content').innerHTML = content;
 

@@ -129,14 +129,19 @@ const CustomersScreen = {
   async renderCreditTab() {
     const el = document.getElementById('customers-tab-content');
     el.innerHTML = `<div class="empty-state">Loading credit accounts...</div>`;
-    let summary;
+    let summary, payments;
     try {
-      summary = await Api.get('/customers/credit-summary');
+      [summary, payments] = await Promise.all([
+        Api.get('/customers/credit-summary'),
+        Api.get('/customer-payments')
+      ]);
     } catch (err) {
       Toast.error(err.message);
       return;
     }
+    this._creditPayments = payments;
     const settings = App.settings;
+    const totalCollected = payments.reduce((s, p) => s + (p.amount || 0), 0);
     el.innerHTML = `
       <div class="stat-grid" style="margin-bottom:20px">
         <div class="stat-card danger-accent">
@@ -146,6 +151,14 @@ const CustomersScreen = {
         <div class="stat-card danger-accent">
           <div class="stat-label">Total Outstanding</div>
           <div class="stat-value">${formatMoney(summary.totalOwed, settings)}</div>
+        </div>
+        <div class="stat-card success-accent">
+          <div class="stat-label">Total Payments Collected (all time)</div>
+          <div class="stat-value">${formatMoney(totalCollected, settings)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"># Payments Recorded</div>
+          <div class="stat-value">${payments.length}</div>
         </div>
       </div>
       <div class="table-wrap">
@@ -163,6 +176,24 @@ const CustomersScreen = {
                   <button class="btn btn-outline btn-sm" data-history="${c.id}">History</button>
                   <button class="btn btn-gold btn-sm" data-collect="${c.id}" data-name="${escapeHtml(c.name)}" data-balance="${c.balance}">Record Payment</button>
                 </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin:24px 0 10px;font-size:1rem">Payments Received Report</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Customer</th><th>Amount</th><th>Method</th><th>Collected By</th></tr></thead>
+          <tbody>
+            ${payments.length === 0 ? `<tr><td colspan="5"><div class="empty-state"><p>No payments recorded yet.</p></div></td></tr>` : payments.slice(0, 100).map(p => `
+              <tr>
+                <td>${formatDateTime(p.createdAt)}</td>
+                <td>${escapeHtml(p.customerName || '-')}</td>
+                <td><span class="money" style="color:var(--success);font-weight:700">${Number(p.amount).toFixed(settings.currencyDecimals ?? 3)}</span></td>
+                <td style="text-transform:capitalize">${escapeHtml(p.method || 'cash')}</td>
+                <td>${escapeHtml(p.collectedByName || '-')}</td>
               </tr>
             `).join('')}
           </tbody>

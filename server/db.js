@@ -65,23 +65,19 @@ async function loadCollection(table) {
   return docs;
 }
 
-// ── FIXED: saveToMongo no longer deletes everything! ──────────────────────
-// Instead of deleteMany + insertMany, we now do UPSERT (update or insert)
-// This preserves data that exists in MongoDB but not in cache (like licenses from admin)
+// ── Upsert every row in the cache into MongoDB. Deletions are handled
+// separately (via deleteOneFromMongo / clearMongoCollection below) so that
+// this function never has to guess "is this missing because it was deleted,
+// or because another app (e.g. admin-app) hasn't synced its cache yet?" -
+// that guess is exactly what caused deleted items to silently reappear.
 
 async function saveToMongo(table, rows) {
   try {
     const mdb = await connectMongo();
-    
-    // Get current MongoDB data to find what's new/changed/deleted
     const existingDocs = await mdb.collection(table).find({}).toArray();
-    const existingIds = new Set(existingDocs.map(r => r.id).filter(id => id !== undefined));
     const cacheIds = new Set(rows.map(r => r.id).filter(id => id !== undefined));
-    
-    // 1. Delete documents that are in MongoDB but NOT in cache (only if explicitly deleted)
-    // For now, we skip deletion to be safe - admin data should never be deleted by POS
-    
-    // 2. Upsert (update or insert) each row from cache
+
+    // Upsert (update or insert) each row from cache.
     for (const row of rows) {
       if (row.id !== undefined) {
         await mdb.collection(table).updateOne(
@@ -90,22 +86,57 @@ async function saveToMongo(table, rows) {
           { upsert: true }
         );
       } else {
-        // No id, insert as new
         await mdb.collection(table).insertOne({ ...row });
       }
     }
-    
-    // 3. Also insert any documents from MongoDB that are NOT in cache
-    // This ensures admin-created licenses are preserved in cache
+
+    // Bring in any documents that exist in MongoDB but not yet in this
+    // process's cache (e.g. a license added by admin-app) - this is only
+    // additive, it never removes anything, so it can't resurrect deletes.
     for (const doc of existingDocs) {
       if (doc.id !== undefined && !cacheIds.has(doc.id)) {
-        // Document exists in MongoDB but not in cache - add to cache
         rows.push(doc);
       }
     }
-    
   } catch(e) {
     console.error('MongoDB write error:', e.message);
+  }
+}
+
+// Explicit, targeted delete - this is what actually removes a document from
+// MongoDB. Previously deletes only removed the row from the in-memory cache;
+// MongoDB kept its copy, so the next time the server restarted (or another
+// process reloaded that collection) the "deleted" row would reload right
+// back into the cache. Deleting by id here is what fixes that for good.
+async function deleteOneFromMongo(table, id) {
+  try {
+    const mdb = await connectMongo();
+    await mdb.collection(table).deleteOne({ id });
+  } catch (e) {
+    console.error('MongoDB delete error:', e.message);
+  }
+}
+
+async function deleteManyFromMongo(table, ids) {
+  try {
+    const mdb = await connectMongo();
+    await mdb.collection(table).deleteMany({ id: { $in: ids } });
+  } catch (e) {
+    console.error('MongoDB bulk delete error:', e.message);
+  }
+}
+
+// True "replace everything" - used for Clear All Products and for restoring
+// a full backup. Wipes the collection and re-inserts, so an empty array
+// really does empty the MongoDB collection instead of leaving old rows
+// behind for a later reload to bring back.
+async function replaceAllInMongo(table, rows) {
+  try {
+    const mdb = await connectMongo();
+    await mdb.collection(table).deleteMany({});
+    if (rows.length) await mdb.collection(table).insertMany(rows.map(r => ({ ...r })));
+  } catch (e) {
+    console.error('MongoDB replace error:', e.message);
   }
 }
 
@@ -209,12 +240,16 @@ const db = {
     const i = rows.findIndex(r => r.id === Number(id));
     if (i === -1) return false;
     rows.splice(i, 1);
-    setRows(t, rows);
+    if (!USE_MONGO) { writeTable(t, rows); return true; }
+    _cache[t] = rows;
+    deleteOneFromMongo(t, Number(id)); // fire-and-forget targeted delete
     return true;
   },
 
   replaceAll(t, rows) {
-    setRows(t, rows);
+    if (!USE_MONGO) { writeTable(t, rows); return rows; }
+    _cache[t] = rows;
+    replaceAllInMongo(t, rows); // fire-and-forget full wipe + re-insert
     return rows;
   }
 };

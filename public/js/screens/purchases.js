@@ -40,9 +40,9 @@ const PurchasesScreen = {
 
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Date</th><th>Supplier</th><th>Items</th><th>Total</th><th>Note</th></tr></thead>
+          <thead><tr><th>Date</th><th>Supplier</th><th>Items</th><th>Total</th><th>Note</th><th>Actions</th></tr></thead>
           <tbody>
-            ${this.purchases.length === 0 ? `<tr><td colspan="5"><div class="empty-state"><p>No purchases recorded yet.</p></div></td></tr>` : this.purchases.map(p => {
+            ${this.purchases.length === 0 ? `<tr><td colspan="6"><div class="empty-state"><p>No purchases recorded yet.</p></div></td></tr>` : this.purchases.map(p => {
               const supplier = this.suppliers.find(s => s.id === p.supplierId);
               return `
               <tr>
@@ -51,6 +51,10 @@ const PurchasesScreen = {
                 <td><a href="#" class="view-purchase-link" data-id="${p.id}" style="color:var(--navy-700);text-decoration:underline">View items</a></td>
                 <td>${formatMoney(p.total, settings)}</td>
                 <td>${escapeHtml(p.note || '-')}</td>
+                <td>
+                  <button class="row-action row-action-edit edit-purchase-btn" data-id="${p.id}" title="Edit">${Icon.edit}</button>
+                  <button class="row-action row-action-delete del-purchase-btn" data-id="${p.id}" title="Delete">${Icon.trash}</button>
+                </td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -66,6 +70,33 @@ const PurchasesScreen = {
         this.viewPurchase(Number(link.dataset.id));
       });
     });
+    document.querySelectorAll('.edit-purchase-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.editPurchase(Number(btn.dataset.id)));
+    });
+    document.querySelectorAll('.del-purchase-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.deletePurchase(Number(btn.dataset.id)));
+    });
+  },
+
+  async editPurchase(id) {
+    try {
+      const purchase = await Api.get(`/purchases/${id}`);
+      this.openNewPurchaseModal(purchase);
+    } catch (err) {
+      Toast.error(err.message);
+    }
+  },
+
+  async deletePurchase(id) {
+    if (!confirm('Delete this purchase? The stock it added will be reversed. This cannot be undone.')) return;
+    try {
+      await Api.del(`/purchases/${id}`);
+      Toast.success('Purchase deleted and stock reversed.');
+      [this.purchases, this.products] = await Promise.all([Api.get('/purchases'), Api.get('/products')]);
+      this.renderScreen();
+    } catch (err) {
+      Toast.error(err.message);
+    }
   },
 
   async viewPurchase(id) {
@@ -93,10 +124,13 @@ const PurchasesScreen = {
     }
   },
 
-  openNewPurchaseModal() {
-    this.draftItems = [];
+  openNewPurchaseModal(existingPurchase) {
+    const editing = !!existingPurchase;
+    this.draftItems = editing
+      ? existingPurchase.items.map(i => ({ productId: i.productId, productName: i.productName, quantity: i.quantity, costPrice: i.costPrice }))
+      : [];
     const render = () => `
-      ${QuickAddSelect.render({ id: 'purchase-supplier', label: 'Supplier (optional)', options: this.suppliers, placeholder: 'No supplier' })}
+      ${QuickAddSelect.render({ id: 'purchase-supplier', label: 'Supplier (optional)', options: this.suppliers, placeholder: 'No supplier', selectedId: editing ? existingPurchase.supplierId : null })}
       <div class="form-group">
         <label class="form-label">Add Item</label>
         <div style="display:flex;gap:8px;margin-bottom:6px">
@@ -135,21 +169,21 @@ const PurchasesScreen = {
       </div>
       <div class="form-group">
         <label class="form-label">Note</label>
-        <input class="form-input" id="purchase-note" placeholder="Optional note">
+        <input class="form-input" id="purchase-note" placeholder="Optional note" value="${editing ? escapeHtml(existingPurchase.note || '') : ''}">
       </div>
       <button class="btn btn-gold" id="save-purchase-btn" style="width:100%;justify-content:center;padding:12px" ${this.draftItems.length === 0 ? 'disabled' : ''}>
-        Save Purchase
+        ${editing ? 'Save Changes' : 'Save Purchase'}
       </button>
     `;
 
-    Modal.open('New Purchase', render(), { large: true });
+    Modal.open(editing ? `Edit Purchase #${existingPurchase.id}` : 'New Purchase', render(), { large: true });
     QuickAddSelect.wire('purchase-supplier', (name) => Api.post('/suppliers', { name }), (created) => {
       this.suppliers.push(created);
     });
-    this.wirePurchaseModal(render);
+    this.wirePurchaseModal(render, editing ? existingPurchase.id : null);
   },
 
-  wirePurchaseModal(render) {
+  wirePurchaseModal(render, editingId) {
     // Barcode / name search
     const barcodeInput = document.getElementById('purchase-barcode');
     const searchBtn = document.getElementById('barcode-search-btn');
@@ -192,7 +226,7 @@ const PurchasesScreen = {
       QuickAddSelect.wire('purchase-supplier', (name) => Api.post('/suppliers', { name }), (created) => {
         this.suppliers.push(created);
       });
-      this.wirePurchaseModal(render);
+      this.wirePurchaseModal(render, editingId);
     });
 
     document.querySelectorAll('.remove-draft-item').forEach(btn => {
@@ -202,7 +236,7 @@ const PurchasesScreen = {
         QuickAddSelect.wire('purchase-supplier', (name) => Api.post('/suppliers', { name }), (created) => {
           this.suppliers.push(created);
         });
-        this.wirePurchaseModal(render);
+        this.wirePurchaseModal(render, editingId);
       });
     });
 
@@ -212,8 +246,13 @@ const PurchasesScreen = {
         const supplierId = document.getElementById('purchase-supplier').value || null;
         const note = document.getElementById('purchase-note').value.trim();
         try {
-          await Api.post('/purchases', { supplierId, items: this.draftItems, note });
-          Toast.success('Purchase saved and stock updated.');
+          if (editingId) {
+            await Api.put(`/purchases/${editingId}`, { supplierId, items: this.draftItems, note });
+            Toast.success('Purchase updated and stock adjusted.');
+          } else {
+            await Api.post('/purchases', { supplierId, items: this.draftItems, note });
+            Toast.success('Purchase saved and stock updated.');
+          }
           Modal.close();
           [this.purchases, this.products] = await Promise.all([Api.get('/purchases'), Api.get('/products')]);
           this.renderScreen();

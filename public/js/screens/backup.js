@@ -52,6 +52,15 @@ const BackupScreen = {
         <div class="backup-icon" style="background:#ede9fe;color:#5b21b6">✉️</div>
         <h2 class="backup-card-title">Automatic Daily Email Backup</h2>
         <p class="backup-card-desc">Every night at 12:00 AM, the server automatically backs up your data and emails it to the addresses below — no need to keep this screen or your computer open.</p>
+        <details style="margin-bottom:12px;font-size:12.5px;color:var(--text-muted);background:var(--surface-1);border-radius:8px;padding:10px 12px">
+          <summary style="cursor:pointer;font-weight:600;color:var(--text-primary)">⚙️ How to set this up (one-time, in Railway)</summary>
+          <ol style="margin:8px 0 0 18px;padding:0;line-height:1.7">
+            <li>Get an SMTP mailbox to send from. Easiest option: a Gmail account with a 16-character <strong>App Password</strong> (Google Account → Security → 2-Step Verification → App passwords). Any provider's SMTP works too (Outlook, Zoho, your host's email, etc).</li>
+            <li>Open your project on <strong>railway.app</strong> → this service → <strong>Variables</strong> tab.</li>
+            <li>Add these 4 variables: <code>SMTP_HOST</code> (e.g. smtp.gmail.com), <code>SMTP_PORT</code> (587), <code>SMTP_USER</code> (your mailbox address), <code>SMTP_PASS</code> (the app password, not your normal login password).</li>
+            <li>Railway redeploys automatically after saving variables. Come back here and click "Send Test Backup Email Now" below.</li>
+          </ol>
+        </details>
         <div id="recipients-list" style="margin-bottom:12px"></div>
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <input type="email" id="new-recipient-email" placeholder="owner@example.com" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);font-size:13px">

@@ -437,4 +437,61 @@ router.post('/purchases', requireLogin, (req, res) => {
   res.json({ ...purchase, items: lineItems });
 });
 
+// Edit an existing purchase. Reverses the stock/cost effect of the old line
+// items first, then re-applies the new ones - so correcting a quantity or
+// price doesn't double up stock or leave the old numbers behind.
+router.put('/purchases/:id', requireAdmin, (req, res) => {
+  const purchase = db.getById('purchases', req.params.id);
+  if (!purchase) return res.status(404).json({ error: 'Purchase not found.' });
+  const { supplierId, items, note } = req.body;
+  if (!items || !items.length) return res.status(400).json({ error: 'Purchase must include at least one item.' });
+
+  // Undo the stock added by the original line items.
+  const oldItems = db.filter('purchase_items', i => i.purchaseId === purchase.id);
+  oldItems.forEach(oi => {
+    const product = db.getById('products', oi.productId);
+    if (product) db.update('products', product.id, { stock: product.stock - oi.quantity });
+    db.delete('purchase_items', oi.id);
+  });
+
+  // Validate and total the new line items (same logic as creating a purchase).
+  let total = 0;
+  const lineItems = [];
+  for (const item of items) {
+    const product = db.getById('products', item.productId);
+    if (!product) return res.status(400).json({ error: `Product ${item.productId} not found.` });
+    const lineTotal = roundMoney(item.quantity * item.costPrice, 3);
+    total = roundMoney(total + lineTotal, 3);
+    lineItems.push({ productId: product.id, productName: product.name, quantity: item.quantity, costPrice: item.costPrice, lineTotal });
+  }
+
+  lineItems.forEach(li => {
+    db.insert('purchase_items', { purchaseId: purchase.id, ...li });
+    const product = db.getById('products', li.productId);
+    db.update('products', product.id, { stock: product.stock + li.quantity, costPrice: li.costPrice });
+  });
+
+  const updated = db.update('purchases', purchase.id, { supplierId: supplierId || null, total, note: note || '' });
+  db.insert('stock_movements', {
+    productId: null, type: 'purchase_edit', quantity: 0,
+    note: `Purchase #${purchase.id} edited`, userId: req.session.userId
+  });
+
+  res.json({ ...updated, items: lineItems });
+});
+
+// Delete a purchase entirely - also reverses the stock it had added.
+router.delete('/purchases/:id', requireAdmin, (req, res) => {
+  const purchase = db.getById('purchases', req.params.id);
+  if (!purchase) return res.status(404).json({ error: 'Purchase not found.' });
+  const items = db.filter('purchase_items', i => i.purchaseId === purchase.id);
+  items.forEach(it => {
+    const product = db.getById('products', it.productId);
+    if (product) db.update('products', product.id, { stock: product.stock - it.quantity });
+    db.delete('purchase_items', it.id);
+  });
+  db.delete('purchases', purchase.id);
+  res.json({ success: true });
+});
+
 module.exports = router;

@@ -121,6 +121,13 @@ router.put('/settings', requireAdmin, async (req, res) => {
     let updated;
     if (current) {
       updated = await Promise.resolve(db.update('settings', current.id, req.body));
+      // Guard against duplicate settings documents (an earlier bug could
+      // leave more than one behind) - clean up any extras so a later
+      // reload can't randomly pick a stale duplicate that looks like the
+      // save "didn't stick".
+      if (all.length > 1) {
+        for (const extra of all.slice(1)) await Promise.resolve(db.delete('settings', extra.id));
+      }
     } else {
       updated = await Promise.resolve(db.insert('settings', { id: 1, ...req.body }));
     }
