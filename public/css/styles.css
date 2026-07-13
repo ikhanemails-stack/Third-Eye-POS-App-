@@ -324,6 +324,11 @@ h1, h2, h3, h4 {
   border-radius: var(--radius-md);
   padding: 18px 20px;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+  /* Grid items default to min-width:auto, which lets a long nowrap money
+     value (e.g. "35.100 BHD") force this card - and the whole page - wider
+     than the phone's viewport. min-width:0 lets the card actually shrink
+     to the grid track instead of blowing out the layout. */
+  min-width: 0;
 }
 
 .stat-card:hover {
@@ -345,6 +350,19 @@ h1, h2, h3, h4 {
   font-family: var(--font-display);
   font-size: 1.7rem;
   font-weight: 700;
+  min-width: 0;
+}
+/* .money is intentionally white-space:nowrap everywhere else (tables etc.)
+   so numbers never break mid-digit. Inside a stat card on a narrow phone
+   that's exactly what was blowing the layout out sideways - so here, once
+   the card has genuinely run out of room, let it ellipsis instead of
+   pushing the whole page wider. */
+.stat-card .stat-value .money {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
 }
 
 .stat-card.accent { border-left: 3px solid var(--gold-500); background: linear-gradient(135deg, var(--gold-100) 0%, var(--surface) 40%); }
@@ -1244,4 +1262,30 @@ body[data-theme="dark"] .table-wrap table tbody tr:hover { background: #2a2a2a; 
   .dash-two-col { grid-template-columns: 1fr !important; }
   .order-pad-fab { top: auto; bottom: 16px; right: 16px; }
   .order-pad-panel { top: auto; bottom: 70px; right: 16px; }
+}
+
+/* ---------- Mobile layout safety net ---------- */
+/* Prevents any one oversized element (long labels, wide toolbars, big
+   numbers) from ever pushing the whole app sideways again - the page
+   scrolls vertically only, individual rows wrap/shrink instead. */
+html, body { overflow-x: hidden; max-width: 100vw; }
+.content { min-width: 0; }
+.toolbar-row > div { flex-wrap: wrap; }
+
+@media (max-width: 480px) {
+  .content { padding: 16px 14px 90px; }
+  .toolbar-row { gap: 8px; }
+  .btn-icon-label { padding: 8px 12px; font-size: 0.78rem; }
+  .toolbar-row > div[style*="margin-left"] { margin-left: 0 !important; width: 100%; }
+  .stat-grid { grid-template-columns: 1fr !important; }
+  .stat-card .stat-value { font-size: 1.4rem; }
+  .page-header { gap: 10px; }
+  /* Icon-only pill on narrow phones - keeps the button small and out of
+     the way of stat cards underneath it (label stays in the markup, just
+     visually hidden via font-size:0 on this narrow breakpoint). */
+  .order-pad-fab { padding: 12px; gap: 0; border-radius: 50%; font-size: 0; }
+  .order-pad-fab .order-pad-badge {
+    font-size: 0.7rem;
+    position: absolute; top: -4px; right: -4px;
+  }
 }
