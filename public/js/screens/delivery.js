@@ -132,10 +132,11 @@ const DeliveryScreen = {
                 <td>${formatMoney(d.deliveryFee, settings)}</td>
                 <td><span class="badge ${this.statusColors[d.status]}">${this.statusLabels[d.status]}</span></td>
                 <td>${formatDate(d.createdAt)}</td>
-                <td style="text-align:right">
+                <td style="text-align:right;white-space:nowrap">
                   <select class="form-select status-select" data-id="${d.id}" style="font-size:0.78rem;padding:6px 8px">
                     ${Object.entries(this.statusLabels).map(([key, label]) => `<option value="${key}" ${d.status === key ? 'selected' : ''}>${label}</option>`).join('')}
                   </select>
+                  <button class="row-action row-action-edit edit-delivery-btn" data-id="${d.id}" title="Edit delivery / reassign driver">${Icon.edit}</button>
                 </td>
               </tr>`;
             }).join('')}
@@ -164,6 +165,9 @@ const DeliveryScreen = {
     });
     document.getElementById('delivery-report-btn').addEventListener('click', () => this.generateReport());
     document.getElementById('manage-drivers-btn').addEventListener('click', () => this.openDriversModal());
+    document.querySelectorAll('.edit-delivery-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.openEditDeliveryModal(this.deliveries.find(d => d.id === Number(btn.dataset.id))));
+    });
     document.querySelectorAll('.status-select').forEach(sel => {
       sel.addEventListener('change', async () => {
         try {
@@ -393,6 +397,62 @@ const DeliveryScreen = {
     document.getElementById('modal-body').innerHTML = render();
     this.wireDeliveryModal(render);
     document.getElementById('d-product-search').focus();
+  },
+
+  // Edit an existing delivery: reassign the driver, fix the address/phone,
+  // adjust the delivery fee, or add notes - without having to delete and
+  // recreate the whole delivery. The backend already supported this
+  // (PUT /deliveries/:id), it just had no button in the UI.
+  openEditDeliveryModal(delivery) {
+    if (!delivery) return;
+    Modal.open(`Edit Delivery`, `
+      <form id="edit-delivery-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Customer Name</label>
+            <input class="form-input" id="ed-customer-name" value="${escapeHtml(delivery.customerName || '')}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input class="form-input" id="ed-customer-phone" value="${escapeHtml(delivery.customerPhone || '')}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <input class="form-input" id="ed-address" value="${escapeHtml(delivery.address || '')}" required>
+        </div>
+        ${QuickAddSelect.render({ id: 'ed-driver', label: 'Assign Driver', options: this.drivers, placeholder: 'Unassigned', selectedId: delivery.driverId })}
+        <div class="form-group">
+          <label class="form-label">Delivery Fee</label>
+          <input class="form-input" id="ed-fee" type="number" step="0.001" value="${delivery.deliveryFee || 0}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <input class="form-input" id="ed-notes" value="${escapeHtml(delivery.notes || '')}">
+        </div>
+        <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center;padding:12px">Save Changes</button>
+      </form>
+    `);
+    QuickAddSelect.wire('ed-driver', (name) => Api.post('/drivers', { name }), (created) => {
+      this.drivers.push(created);
+    });
+    document.getElementById('edit-delivery-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await Api.put(`/deliveries/${delivery.id}`, {
+          customerName: document.getElementById('ed-customer-name').value.trim(),
+          customerPhone: document.getElementById('ed-customer-phone').value.trim(),
+          address: document.getElementById('ed-address').value.trim(),
+          driverId: document.getElementById('ed-driver').value ? Number(document.getElementById('ed-driver').value) : null,
+          deliveryFee: Number(document.getElementById('ed-fee').value) || 0,
+          notes: document.getElementById('ed-notes').value.trim()
+        });
+        Toast.success('Delivery updated.');
+        Modal.close();
+        this.deliveries = await Api.get('/deliveries');
+        this.renderScreen();
+      } catch (err) { Toast.error(err.message); }
+    });
   },
 
   openDriversModal() {

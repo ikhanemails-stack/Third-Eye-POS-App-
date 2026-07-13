@@ -40,9 +40,9 @@ const PurchasesScreen = {
 
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Date</th><th>Supplier</th><th>Items</th><th>Total</th><th>Note</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Date</th><th>Supplier</th><th>Items</th><th>Total</th><th>Note</th><th>Invoice</th><th>Actions</th></tr></thead>
           <tbody>
-            ${this.purchases.length === 0 ? `<tr><td colspan="6"><div class="empty-state"><p>No purchases recorded yet.</p></div></td></tr>` : this.purchases.map(p => {
+            ${this.purchases.length === 0 ? `<tr><td colspan="7"><div class="empty-state"><p>No purchases recorded yet.</p></div></td></tr>` : this.purchases.map(p => {
               const supplier = this.suppliers.find(s => s.id === p.supplierId);
               return `
               <tr>
@@ -51,6 +51,9 @@ const PurchasesScreen = {
                 <td><a href="#" class="view-purchase-link" data-id="${p.id}" style="color:var(--navy-700);text-decoration:underline">View items</a></td>
                 <td>${formatMoney(p.total, settings)}</td>
                 <td>${escapeHtml(p.note || '-')}</td>
+                <td>${p.hasAttachment
+                  ? `<a href="#" class="view-attachment-link" data-id="${p.id}" title="View attached invoice/receipt" style="display:inline-flex;align-items:center;gap:4px;color:var(--navy-700)">📎 View</a>`
+                  : '<span style="color:var(--text-muted);font-size:0.78rem">-</span>'}</td>
                 <td>
                   <button class="row-action row-action-edit edit-purchase-btn" data-id="${p.id}" title="Edit">${Icon.edit}</button>
                   <button class="row-action row-action-delete del-purchase-btn" data-id="${p.id}" title="Delete">${Icon.trash}</button>
@@ -72,6 +75,15 @@ const PurchasesScreen = {
     });
     document.querySelectorAll('.edit-purchase-btn').forEach(btn => {
       btn.addEventListener('click', () => this.editPurchase(Number(btn.dataset.id)));
+    });
+    document.querySelectorAll('.view-attachment-link').forEach(link => {
+      link.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+          const attachment = await Api.get(`/purchases/${link.dataset.id}/attachment`);
+          this.openAttachmentPreview(attachment);
+        } catch (err) { Toast.error(err.message); }
+      });
     });
     document.querySelectorAll('.del-purchase-btn').forEach(btn => {
       btn.addEventListener('click', () => this.deletePurchase(Number(btn.dataset.id)));
@@ -118,9 +130,41 @@ const PurchasesScreen = {
             </tbody>
           </table>
         </div>
+        ${purchase.attachment ? `
+          <div style="margin-top:14px">
+            <button type="button" class="btn-icon-label" id="view-attached-invoice-btn">📎 View attached invoice/receipt (${escapeHtml(purchase.attachment.name)})</button>
+          </div>
+        ` : ''}
       `);
+      const viewBtn = document.getElementById('view-attached-invoice-btn');
+      if (viewBtn) viewBtn.addEventListener('click', () => this.openAttachmentPreview(purchase.attachment));
     } catch (err) {
       Toast.error(err.message);
+    }
+  },
+
+  // Shows an attached vendor-invoice file (image inline, PDF/other in a new
+  // tab) - this is the "proof of goods received" the strategy report asked
+  // for, so a purchase price can be double-checked against the real invoice.
+  openAttachmentPreview(attachment) {
+    if (!attachment) return;
+    const isImage = /^data:image\//.test(attachment.dataUrl);
+    if (isImage) {
+      Modal.open(escapeHtml(attachment.name || 'Attachment'), `
+        <div style="text-align:center">
+          <img src="${attachment.dataUrl}" alt="${escapeHtml(attachment.name || '')}" style="max-width:100%;max-height:70vh;border-radius:6px">
+          <div style="margin-top:12px">
+            <a href="${attachment.dataUrl}" download="${escapeHtml(attachment.name || 'invoice')}" class="btn btn-outline btn-sm">Download</a>
+          </div>
+        </div>
+      `, { large: true });
+    } else {
+      const win = window.open();
+      if (win) {
+        win.document.write(`<iframe src="${attachment.dataUrl}" style="border:0;width:100%;height:100vh"></iframe>`);
+      } else {
+        Toast.error('Please allow pop-ups to view the attachment, or use the Download link.');
+      }
     }
   },
 
@@ -129,6 +173,10 @@ const PurchasesScreen = {
     this.draftItems = editing
       ? existingPurchase.items.map(i => ({ productId: i.productId, productName: i.productName, quantity: i.quantity, costPrice: i.costPrice }))
       : [];
+    // Attachment state for this modal session: the scanned/photographed
+    // vendor invoice, kept as {name, dataUrl}. null = no attachment.
+    this.draftAttachment = editing ? (existingPurchase.attachment || null) : null;
+    this.draftRemoveAttachment = false;
     const render = () => `
       ${QuickAddSelect.render({ id: 'purchase-supplier', label: 'Supplier (optional)', options: this.suppliers, placeholder: 'No supplier', selectedId: editing ? existingPurchase.supplierId : null })}
       <div class="form-group">
@@ -170,6 +218,20 @@ const PurchasesScreen = {
       <div class="form-group">
         <label class="form-label">Note</label>
         <input class="form-input" id="purchase-note" placeholder="Optional note" value="${editing ? escapeHtml(existingPurchase.note || '') : ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Invoice / Receipt Attachment (optional)</label>
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:6px">
+          Photo or PDF of the supplier's invoice - proof of what was actually received. Max 6MB.
+        </div>
+        ${this.draftAttachment ? `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg-subtle,#f5f5f5);border-radius:6px;margin-bottom:8px">
+            <span style="flex:1;font-size:0.85rem">📎 ${escapeHtml(this.draftAttachment.name)}</span>
+            <button type="button" class="btn btn-outline btn-sm" id="preview-attachment-btn">Preview</button>
+            <button type="button" class="btn btn-outline btn-sm" id="remove-attachment-btn">Remove</button>
+          </div>
+        ` : ''}
+        <input type="file" class="form-input" id="purchase-attachment-input" accept="image/*,.pdf">
       </div>
       <button class="btn btn-gold" id="save-purchase-btn" style="width:100%;justify-content:center;padding:12px" ${this.draftItems.length === 0 ? 'disabled' : ''}>
         ${editing ? 'Save Changes' : 'Save Purchase'}
@@ -240,17 +302,62 @@ const PurchasesScreen = {
       });
     });
 
+    const MAX_ATTACHMENT_BYTES = 6 * 1024 * 1024;
+    const attachmentInput = document.getElementById('purchase-attachment-input');
+    if (attachmentInput) {
+      attachmentInput.addEventListener('change', () => {
+        const file = attachmentInput.files[0];
+        if (!file) return;
+        if (file.size > MAX_ATTACHMENT_BYTES) {
+          Toast.error('File is too large. Please use a file under 6MB.');
+          attachmentInput.value = '';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          this.draftAttachment = { name: file.name, dataUrl: reader.result };
+          this.draftRemoveAttachment = false;
+          document.getElementById('modal-body').innerHTML = render();
+          QuickAddSelect.wire('purchase-supplier', (name) => Api.post('/suppliers', { name }), (created) => {
+            this.suppliers.push(created);
+          });
+          this.wirePurchaseModal(render, editingId);
+        };
+        reader.onerror = () => Toast.error('Could not read that file.');
+        reader.readAsDataURL(file);
+      });
+    }
+    const previewBtn = document.getElementById('preview-attachment-btn');
+    if (previewBtn) {
+      previewBtn.addEventListener('click', () => this.openAttachmentPreview(this.draftAttachment));
+    }
+    const removeBtn = document.getElementById('remove-attachment-btn');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        this.draftAttachment = null;
+        this.draftRemoveAttachment = true;
+        document.getElementById('modal-body').innerHTML = render();
+        QuickAddSelect.wire('purchase-supplier', (name) => Api.post('/suppliers', { name }), (created) => {
+          this.suppliers.push(created);
+        });
+        this.wirePurchaseModal(render, editingId);
+      });
+    }
+
     const saveBtn = document.getElementById('save-purchase-btn');
     if (saveBtn) {
       saveBtn.addEventListener('click', async () => {
         const supplierId = document.getElementById('purchase-supplier').value || null;
         const note = document.getElementById('purchase-note').value.trim();
+        const payload = { supplierId, items: this.draftItems, note };
+        if (this.draftAttachment) payload.attachment = this.draftAttachment;
+        if (this.draftRemoveAttachment) payload.removeAttachment = true;
         try {
           if (editingId) {
-            await Api.put(`/purchases/${editingId}`, { supplierId, items: this.draftItems, note });
+            await Api.put(`/purchases/${editingId}`, payload);
             Toast.success('Purchase updated and stock adjusted.');
           } else {
-            await Api.post('/purchases', { supplierId, items: this.draftItems, note });
+            await Api.post('/purchases', payload);
             Toast.success('Purchase saved and stock updated.');
           }
           Modal.close();

@@ -96,8 +96,19 @@ const InventoryScreen = {
     document.getElementById('content').innerHTML = content;
 
     document.getElementById('inv-search').addEventListener('input', (e) => {
+      // Fix: renderScreen() rebuilds the whole table+toolbar, which replaces
+      // the search input with a brand-new element and used to steal focus
+      // and reset the cursor to the end after every single keystroke - you
+      // could only ever type one character at a time. We now remember the
+      // cursor position and put focus back on the new input after re-render.
+      const cursorPos = e.target.selectionStart;
       this.searchTerm = e.target.value;
       this.renderScreen();
+      const newInput = document.getElementById('inv-search');
+      if (newInput) {
+        newInput.focus();
+        newInput.setSelectionRange(cursorPos, cursorPos);
+      }
     });
     document.getElementById('add-product-btn').addEventListener('click', () => this.openProductModal());
     document.getElementById('manage-categories-btn').addEventListener('click', () => this.openCategoriesModal());

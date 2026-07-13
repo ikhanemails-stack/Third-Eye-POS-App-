@@ -395,7 +395,13 @@ router.get('/stock-movements', requireLogin, (req, res) => {
 // ---------- PURCHASES (stock-in from suppliers) ----------
 
 router.get('/purchases', requireLogin, (req, res) => {
-  const purchases = db.all('purchases').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // Attachments (scanned invoices) can be a few MB each - don't ship the full
+  // file for every row in the list view, just a flag; the full file loads
+  // when a specific purchase is opened (GET /purchases/:id) or downloaded
+  // (GET /purchases/:id/attachment).
+  const purchases = db.all('purchases')
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .map(p => ({ ...p, hasAttachment: !!p.attachment, attachment: undefined }));
   res.json(purchases);
 });
 
@@ -406,9 +412,39 @@ router.get('/purchases/:id', requireLogin, (req, res) => {
   res.json({ ...purchase, items });
 });
 
+// A purchase attachment is the scanned/photographed vendor invoice - proof
+// that the goods were actually received at the price recorded. Stored the
+// same way product photos already are (base64 data URL), capped well under
+// the 15mb JSON body limit set in server/index.js.
+const MAX_ATTACHMENT_BYTES = 6 * 1024 * 1024; // ~6MB raw file (~8MB base64)
+function validateAttachment(attachment) {
+  if (!attachment) return null;
+  if (!attachment.dataUrl || typeof attachment.dataUrl !== 'string' || !attachment.dataUrl.startsWith('data:')) {
+    throw new Error('Attachment must be a valid file.');
+  }
+  const approxBytes = Math.ceil((attachment.dataUrl.length * 3) / 4);
+  if (approxBytes > MAX_ATTACHMENT_BYTES) {
+    throw new Error('Attachment is too large. Please use a file under 6MB.');
+  }
+  return { name: String(attachment.name || 'attachment').slice(0, 200), dataUrl: attachment.dataUrl };
+}
+
+router.get('/purchases/:id/attachment', requireLogin, (req, res) => {
+  const purchase = db.getById('purchases', req.params.id);
+  if (!purchase || !purchase.attachment) return res.status(404).json({ error: 'No attachment for this purchase.' });
+  res.json(purchase.attachment);
+});
+
 router.post('/purchases', requireLogin, (req, res) => {
-  const { supplierId, items, note } = req.body;
+  const { supplierId, items, note, attachment } = req.body;
   if (!items || !items.length) return res.status(400).json({ error: 'Purchase must include at least one item.' });
+
+  let safeAttachment;
+  try {
+    safeAttachment = validateAttachment(attachment);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
 
   let total = 0;
   const lineItems = [];
@@ -421,7 +457,8 @@ router.post('/purchases', requireLogin, (req, res) => {
   }
 
   const purchase = db.insert('purchases', {
-    supplierId: supplierId || null, total, note: note || '', userId: req.session.userId, status: 'received'
+    supplierId: supplierId || null, total, note: note || '', userId: req.session.userId, status: 'received',
+    attachment: safeAttachment || null
   });
 
   lineItems.forEach(li => {
@@ -443,8 +480,15 @@ router.post('/purchases', requireLogin, (req, res) => {
 router.put('/purchases/:id', requireAdmin, (req, res) => {
   const purchase = db.getById('purchases', req.params.id);
   if (!purchase) return res.status(404).json({ error: 'Purchase not found.' });
-  const { supplierId, items, note } = req.body;
+  const { supplierId, items, note, attachment, removeAttachment } = req.body;
   if (!items || !items.length) return res.status(400).json({ error: 'Purchase must include at least one item.' });
+
+  let safeAttachment;
+  try {
+    safeAttachment = validateAttachment(attachment);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
 
   // Undo the stock added by the original line items.
   const oldItems = db.filter('purchase_items', i => i.purchaseId === purchase.id);
@@ -471,7 +515,8 @@ router.put('/purchases/:id', requireAdmin, (req, res) => {
     db.update('products', product.id, { stock: product.stock + li.quantity, costPrice: li.costPrice });
   });
 
-  const updated = db.update('purchases', purchase.id, { supplierId: supplierId || null, total, note: note || '' });
+  const attachmentUpdate = removeAttachment ? null : (safeAttachment || purchase.attachment || null);
+  const updated = db.update('purchases', purchase.id, { supplierId: supplierId || null, total, note: note || '', attachment: attachmentUpdate });
   db.insert('stock_movements', {
     productId: null, type: 'purchase_edit', quantity: 0,
     note: `Purchase #${purchase.id} edited`, userId: req.session.userId

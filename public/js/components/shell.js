@@ -86,7 +86,17 @@ const Shell = {
   },
 
   mount(activePath, contentHtml) {
+    // Fix: re-rendering the whole shell on every navigation used to reset the
+    // sidebar's scroll position back to the top, which is annoying on a long
+    // nav list. Capture it before the re-render and restore it after.
+    const prevSidebar = document.getElementById('sidebar');
+    const prevScrollTop = prevSidebar ? prevSidebar.scrollTop : 0;
+
     document.getElementById('app').innerHTML = this.render(activePath, contentHtml);
+
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.scrollTop = prevScrollTop;
+
     document.getElementById('logout-btn').addEventListener('click', async () => {
       await Api.post('/auth/logout');
       App.user = null;
