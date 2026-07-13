@@ -69,5 +69,20 @@ const Zatca = {
       vatTotal: sale.vatTotal
     });
     return this.renderQrSvg(base64Payload);
+  },
+
+  // --- "Scan to view receipt online" QR ---
+  // This is a SEPARATE, non-ZATCA QR. It just encodes a plain URL, so a
+  // normal phone camera recognizes it as a link and opens the receipt page
+  // straight in the browser - the human-readable view customers expect.
+  // It does not replace the compliance QR above; both can print together.
+  buildReceiptUrl(sale) {
+    const origin = (typeof window !== 'undefined' && window.location) ? window.location.origin : '';
+    return `${origin}/r/${encodeURIComponent(sale.invoiceNo || '')}`;
+  },
+
+  buildReceiptQrSvg(sale) {
+    if (!sale || !sale.invoiceNo) return '';
+    return this.renderQrSvg(this.buildReceiptUrl(sale));
   }
 };

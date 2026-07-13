@@ -112,6 +112,13 @@ ${settings.requiresZatcaQr ? `
 <div class="center" style="margin:8px 0">
   <div style="font-size:${base-1}px;font-weight:${fw};margin-bottom:4px">Simplified Tax Invoice (ZATCA)</div>
   <div style="display:inline-block;padding:6px;background:#fff">${(typeof Zatca!=='undefined'?Zatca.buildQrSvgForSale(sale,settings):'')}</div>
+  <div style="font-size:${base-2}px;color:#777;margin-top:2px">For tax verification only - scanning shows raw data, not a receipt.</div>
+</div>
+<hr class="divider">` : ''}
+${(settings.enableDigitalReceipt !== false && sale.invoiceNo) ? `
+<div class="center" style="margin:8px 0">
+  <div style="font-size:${base-1}px;font-weight:${fw};margin-bottom:4px">Scan to View Receipt Online</div>
+  <div style="display:inline-block;padding:6px;background:#fff">${(typeof Zatca!=='undefined'?Zatca.buildReceiptQrSvg(sale):'')}</div>
 </div>
 <hr class="divider">` : ''}
 <div class="center" style="font-size:${base}px;font-weight:${fw};margin-top:6px;white-space:pre-line">${escapeHtmlR(settings.receiptFooter||'Thank you for shopping with us!')}</div>
