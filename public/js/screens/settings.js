@@ -9,11 +9,34 @@ const SettingsScreen = {
     Shell.mount('/settings', `<div class="empty-state">Loading settings...</div>`);
     try {
       this.settings = await Api.get('/settings');
+      // Country -> VAT/currency reference table (Bahrain, Saudi Arabia/ZATCA,
+      // UAE, Oman, Qatar, Kuwait). Used only to auto-fill fields below - the
+      // actual values used at checkout/print time always come from
+      // this.settings itself, once saved.
+      this.taxConfig = await Api.get('/tax-config');
     } catch (err) {
       Toast.error(err.message);
       return;
     }
     this.renderScreen();
+  },
+
+  // Called when the admin picks a different country in the dropdown.
+  // Auto-fills VAT rate, currency, decimals, VAT label and the ZATCA QR flag
+  // from the reference table - admin can still tweak the VAT rate manually
+  // afterwards (e.g. if a special rate applies), nothing is locked.
+  onCountryChange(countryCode) {
+    const cfg = this.taxConfig?.[countryCode];
+    if (!cfg) return;
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    setVal('s-vatRate', cfg.vatRate);
+    setVal('s-currency', cfg.currency);
+    setVal('s-currencyDecimals', cfg.currencyDecimals);
+    const hint = document.getElementById('country-tax-hint');
+    if (hint) hint.textContent = cfg.note;
+    const authorityEl = document.getElementById('country-authority');
+    if (authorityEl) authorityEl.textContent = `Tax authority: ${cfg.authority}`;
+    this.updateLivePreview?.();
   },
 
   renderScreen() {
@@ -72,6 +95,16 @@ const SettingsScreen = {
 
         <div class="card-flat" style="margin-bottom:20px">
           <h3 style="font-size:1rem;margin-bottom:16px">Legal &amp; Tax Information</h3>
+          <div class="form-group">
+            <label class="form-label">Country</label>
+            <select class="form-input" id="s-country" ${!isAdmin ? 'disabled' : ''}>
+              ${Object.values(this.taxConfig || {}).map(c =>
+                `<option value="${c.code}" ${s.country === c.code ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
+              ).join('')}
+            </select>
+            <div class="form-hint" id="country-tax-hint">${escapeHtml(this.taxConfig?.[s.country]?.note || '')}</div>
+            <div class="form-hint" id="country-authority" style="color:var(--text-muted)">${escapeHtml(this.taxConfig?.[s.country] ? `Tax authority: ${this.taxConfig[s.country].authority}` : '')}</div>
+          </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">CR Number (Commercial Registration)</label>
@@ -86,13 +119,16 @@ const SettingsScreen = {
             <div class="form-group">
               <label class="form-label">VAT Rate (%)</label>
               <input class="form-input" id="s-vatRate" type="number" step="0.1" value="${s.vatRate}" ${!isAdmin ? 'disabled' : ''}>
-              <div class="form-hint">Bahrain standard VAT rate is 10%.</div>
+              <div class="form-hint">Auto-filled from Country above - you can still adjust it manually if a special rate applies.</div>
             </div>
             <div class="form-group">
               <label class="form-label">Currency</label>
               <input class="form-input" id="s-currency" value="${escapeHtml(s.currency)}" ${!isAdmin ? 'disabled' : ''}>
             </div>
           </div>
+          ${s.country === 'SA' ? `<div class="card" style="background:var(--warning-bg,#FFF7E8);border-color:#ECD6AE;font-size:0.8rem;color:#7a5710;margin-top:4px">
+            Saudi Arabia selected: every receipt will now print a ZATCA "Simplified Tax Invoice" QR code automatically (Phase 1). Full ZATCA Phase 2 real-time reporting requires onboarding your business directly with ZATCA to get API credentials - that step happens outside this app, on ZATCA's own portal.
+          </div>` : ''}
           <div class="form-group">
             <label class="form-label">Currency Decimal Places</label>
             <input class="form-input" id="s-currencyDecimals" type="number" min="0" max="4" value="${s.currencyDecimals}" ${!isAdmin ? 'disabled' : ''}>
@@ -239,6 +275,12 @@ const SettingsScreen = {
     if (isAdmin) {
       document.getElementById('settings-form').addEventListener('submit', (e) => this.saveSettings(e));
       document.getElementById('logo-upload').addEventListener('change', (e) => this.handleLogoUpload(e));
+      document.getElementById('s-country')?.addEventListener('change', (e) => {
+        this.onCountryChange(e.target.value);
+        // Re-render so the Saudi/ZATCA notice box and hints reflect the new pick.
+        this.settings = { ...this.settings, ...this.getDraftSettings(), country: e.target.value };
+        this.renderScreen();
+      });
     }
     document.getElementById('preview-receipt-btn').addEventListener('click', () => this.previewReceipt());
     // Show live preview on load
@@ -268,6 +310,8 @@ const SettingsScreen = {
   },
 
   getDraftSettings() {
+    const country = document.getElementById('s-country')?.value || this.settings.country || 'BH';
+    const cfg = this.taxConfig?.[country];
     return {
       ...this.settings,
       shopName: document.getElementById('s-shopName')?.value.trim() || this.settings.shopName,
@@ -275,6 +319,10 @@ const SettingsScreen = {
       phone: document.getElementById('s-phone')?.value.trim(),
       crNumber: document.getElementById('s-crNumber')?.value.trim(),
       vatNumber: document.getElementById('s-vatNumber')?.value.trim(),
+      country,
+      vatLabel: cfg?.vatLabel || this.settings.vatLabel || 'VAT',
+      requiresZatcaQr: cfg ? cfg.requiresZatcaQr : !!this.settings.requiresZatcaQr,
+      taxAuthority: cfg?.authority || this.settings.taxAuthority || '',
       vatRate: Number(document.getElementById('s-vatRate')?.value) || this.settings.vatRate,
       currency: document.getElementById('s-currency')?.value.trim() || this.settings.currency,
       currencyDecimals: Number(document.getElementById('s-currencyDecimals')?.value),
@@ -317,6 +365,8 @@ const SettingsScreen = {
 
   async saveSettings(e) {
     e.preventDefault();
+    const country = document.getElementById('s-country').value;
+    const cfg = this.taxConfig?.[country];
     const payload = {
       shopName: document.getElementById('s-shopName').value.trim(),
       shopNameAr: document.getElementById('s-shopNameAr').value.trim(),
@@ -325,6 +375,12 @@ const SettingsScreen = {
       email: document.getElementById('s-email').value.trim(),
       crNumber: document.getElementById('s-crNumber').value.trim(),
       vatNumber: document.getElementById('s-vatNumber').value.trim(),
+      country,
+      // Denormalized onto the settings document itself so checkout/receipt
+      // code never has to look up the country table again - see tax-config.js.
+      vatLabel: cfg?.vatLabel || 'VAT',
+      requiresZatcaQr: cfg ? cfg.requiresZatcaQr : false,
+      taxAuthority: cfg?.authority || '',
       vatRate: Number(document.getElementById('s-vatRate').value),
       currency: document.getElementById('s-currency').value.trim(),
       currencyDecimals: Number(document.getElementById('s-currencyDecimals').value),
