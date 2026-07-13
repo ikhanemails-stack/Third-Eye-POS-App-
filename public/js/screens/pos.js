@@ -313,34 +313,56 @@ const PosScreen = {
 
     // Fallback for iPhone/Safari and any other browser without
     // BarcodeDetector: ZXing decodes frames from the video element itself.
-    try {
-      const hints = new Map();
-      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-        ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
-        ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E,
-        ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39,
-        ZXing.BarcodeFormat.QR_CODE
-      ]);
-      zxingReader = new ZXing.BrowserMultiFormatReader(hints);
-      const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
-      // Prefer a rear/back camera on phones when the label makes it obvious;
-      // otherwise let ZXing pick the default (usually the back camera on iOS
-      // when constraints request environment facing).
-      const backCam = devices.find(d => /back|rear|environment/i.test(d.label));
-      const deviceId = backCam ? backCam.deviceId : (devices[0] && devices[0].deviceId);
+    //
+    // Note on iOS Safari specifically: pre-enumerating cameras with
+    // listVideoInputDevices() before ever requesting camera access is
+    // unreliable on iOS (device labels/order aren't guaranteed until
+    // permission has already been granted once), and it was an extra async
+    // step between the user's tap and the actual camera request - which
+    // WebKit can be picky about. We now ask for the back camera directly via
+    // facingMode and only fall back to device enumeration if that specific
+    // attempt fails.
+    const hints = new Map();
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+      ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
+      ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E,
+      ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39,
+      ZXing.BarcodeFormat.QR_CODE
+    ]);
+    zxingReader = new ZXing.BrowserMultiFormatReader(hints);
 
+    const onDecodeResult = (result, err) => {
+      if (stopped) return;
+      if (result) onResult(result.getText());
+      // NotFoundException fires continuously while no code is in view -
+      // that's expected and not an error to surface to the cashier.
+    };
+
+    try {
       await zxingReader.decodeFromConstraints(
-        { video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: 'environment' } } },
+        { video: { facingMode: { ideal: 'environment' } } },
         video,
-        (result, err) => {
-          if (stopped) return;
-          if (result) onResult(result.getText());
-          // NotFoundException fires continuously while no code is in view -
-          // that's expected and not an error to surface to the cashier.
-        }
+        onDecodeResult
       );
-    } catch (e) {
-      errorBox.textContent = this.cameraErrorMessage(e);
+      return;
+    } catch (firstErr) {
+      // Some devices/browsers reject facingMode outright (rare, but seen on
+      // a handful of older iPads/iPhones) - retry once by explicitly listing
+      // devices and picking one, before giving up and showing an error.
+      try {
+        const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
+        const backCam = devices.find(d => /back|rear|environment/i.test(d.label));
+        const deviceId = backCam ? backCam.deviceId : (devices[0] && devices[0].deviceId);
+        if (!deviceId) throw firstErr;
+        await zxingReader.decodeFromConstraints(
+          { video: { deviceId: { exact: deviceId } } },
+          video,
+          onDecodeResult
+        );
+      } catch (secondErr) {
+        console.warn('Camera scan failed:', firstErr, secondErr);
+        errorBox.textContent = this.cameraErrorMessage(secondErr.name ? secondErr : firstErr);
+      }
     }
   },
 
@@ -362,7 +384,8 @@ const PosScreen = {
     if (name === 'SecurityError' || (location.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(location.hostname))) {
       return 'Camera access needs a secure (https://) connection. If you\'re opening this on a local network address (like an IP starting with 192.168.), switch to the https:// web address instead.';
     }
-    return 'Could not access the camera. Please check camera permissions for this site and try again.';
+    const detail = (e && e.message) ? ` (${e.message})` : '';
+    return `Could not access the camera${detail}. On iPhone: fully close Safari (swipe it away in the app switcher, not just the tab), reopen this page, and allow the camera prompt when it appears. If you already allowed it once and it's still failing, try Settings > Safari > Advanced > Website Data > remove this site's data, then reload and allow the prompt again. A USB/Bluetooth barcode scanner or typing the barcode always works as a backup.`;
   },
 
   handleBarcodeEnter() {

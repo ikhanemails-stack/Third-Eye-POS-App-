@@ -23,6 +23,7 @@ app.use(session({
 }));
 
 app.use('/api', require('./routes/license-routes'));
+app.use('/api', require('./routes/public-receipt'));
 app.use('/api', requireLicense, require('./routes/auth-settings'));
 app.use('/api', requireLicense, require('./routes/inventory'));
 app.use('/api', requireLicense, require('./routes/sales'));
@@ -57,6 +58,13 @@ app.post('/setup-admin', async (req, res) => {
 });
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// "Scan to View Receipt Online" QR target. Must come before the SPA
+// catch-all below, or it would just load the app's login screen instead.
+app.get('/r/:invoiceNo', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'receipt-view.html'));
+});
+
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 
 async function start() {

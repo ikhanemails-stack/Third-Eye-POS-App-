@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Receipt</title>
+<style>
+  html, body { background: #eef0f2; margin: 0; padding: 0; }
+  #receipt-wrap { max-width: 480px; margin: 0 auto; padding: 16px 0 90px; }
+  #receipt-frame { background: #fff; border-radius: 10px; box-shadow: 0 2px 14px rgba(0,0,0,.12); overflow: hidden; }
+  #status-msg { text-align: center; color: #667; font-family: system-ui, sans-serif; padding: 60px 20px; }
+  #print-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #14324F; padding: 12px 16px; text-align: center;
+    box-shadow: 0 -2px 10px rgba(0,0,0,.15);
+  }
+  #print-bar button {
+    background: #C9A23A; color: #14324F; border: none; border-radius: 8px;
+    font-family: system-ui, sans-serif; font-weight: 700; font-size: 15px;
+    padding: 12px 28px; cursor: pointer;
+  }
+  @media print {
+    html, body { background: #fff; }
+    #print-bar { display: none; }
+    #receipt-wrap { padding: 0; max-width: none; }
+    #receipt-frame { box-shadow: none; border-radius: 0; }
+  }
+</style>
+</head>
+<body>
+  <div id="receipt-wrap">
+    <div id="status-msg">Loading your receipt…</div>
+    <div id="receipt-frame" style="display:none"></div>
+  </div>
+  <div id="print-bar" style="display:none">
+    <button id="print-btn">🖨️ Print / Save as PDF</button>
+  </div>
+
+  <script src="/js/vendor/qrcode.js"></script>
+  <script src="/js/components/zatca.js"></script>
+  <script src="/js/components/receipt.js"></script>
+  <script>
+    (function () {
+      const invoiceNo = decodeURIComponent(location.pathname.replace(/^\/r\//, ''));
+      const statusEl = document.getElementById('status-msg');
+      const frameEl = document.getElementById('receipt-frame');
+      const printBar = document.getElementById('print-bar');
+
+      if (!invoiceNo) {
+        statusEl.textContent = 'No invoice number given.';
+        return;
+      }
+
+      fetch('/api/public/receipt/' + encodeURIComponent(invoiceNo))
+        .then(res => res.json().then(data => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+          if (!ok) {
+            statusEl.textContent = data.error || 'Receipt not found.';
+            return;
+          }
+          // Receipt.buildHtml() returns a full <html> document (it's also
+          // used for the print popup at checkout) - extract just the
+          // <body> contents so it drops cleanly into this page instead.
+          const fullHtml = Receipt.buildHtml(data.sale, data.settings);
+          const bodyMatch = fullHtml.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+          frameEl.innerHTML = bodyMatch ? bodyMatch[1] : fullHtml;
+          frameEl.style.padding = '14px';
+          statusEl.style.display = 'none';
+          frameEl.style.display = 'block';
+          printBar.style.display = 'block';
+        })
+        .catch(() => {
+          statusEl.textContent = 'Could not load this receipt. Please check your connection and try again.';
+        });
+
+      document.getElementById('print-btn').addEventListener('click', () => window.print());
+    })();
+  </script>
+</body>
+</html>

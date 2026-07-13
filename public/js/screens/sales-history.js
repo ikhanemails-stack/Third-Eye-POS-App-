@@ -124,6 +124,7 @@ const SalesHistoryScreen = {
                 <td style="text-align:right;white-space:nowrap">
                   <div class="row-actions-group">
                     <button class="row-action row-action-view view-sale-btn" data-id="${s.id}" title="View">${Icon.box}</button>
+                    <button class="row-action row-action-adjust reprint-sale-btn" data-id="${s.id}" title="Reprint receipt / view QR code">${Icon.printer}</button>
                     <button class="row-action row-action-adjust whatsapp-sale-btn" data-id="${s.id}" title="Send Receipt on WhatsApp">${Icon.whatsapp}</button>
                     ${s.status !== 'refunded' && s.orderType !== 'delivery' ? `<button class="row-action row-action-adjust transfer-delivery-btn" data-id="${s.id}" title="Transfer to Delivery">${Icon.truck}</button>` : ''}
                     ${s.status !== 'refunded' ? `<button class="row-action row-action-delete refund-sale-btn" data-id="${s.id}" title="Refund">${Icon.x}</button>` : ''}
@@ -165,6 +166,22 @@ const SalesHistoryScreen = {
     document.querySelectorAll('.whatsapp-sale-btn').forEach(btn => {
       btn.addEventListener('click', () => this.openWhatsAppModal(Number(btn.dataset.id)));
     });
+    document.querySelectorAll('.reprint-sale-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.reprintSale(Number(btn.dataset.id)));
+    });
+  },
+
+  // Reopens the exact same printable receipt (with the ZATCA QR and the
+  // "scan to view online" QR) that was shown right after checkout - so
+  // closing that window/tab is never the end of the road. Also works for
+  // any sale, not just the one just rung up.
+  async reprintSale(id) {
+    try {
+      const sale = await Api.get(`/sales/${id}`);
+      Receipt.print(sale, App.settings);
+    } catch (err) {
+      Toast.error(err.message);
+    }
   },
 
   async openWhatsAppModal(id) {
@@ -202,6 +219,9 @@ const SalesHistoryScreen = {
       const sale = await Api.get(`/sales/${id}`);
       const settings = App.settings;
       Modal.open(`Invoice ${sale.invoiceNo}`, `
+        <button class="btn btn-outline btn-sm" id="modal-reprint-btn" style="margin-bottom:12px">
+          🖨️ Reprint Receipt / View QR Code
+        </button>
         <div class="table-wrap" style="box-shadow:none;margin-bottom:14px">
           <table>
             <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>VAT</th><th>Total</th></tr></thead>
@@ -223,6 +243,8 @@ const SalesHistoryScreen = {
         ${sale.discount > 0 ? `<div class="summary-row"><span>Discount</span><span>-${formatMoney(sale.discount, settings)}</span></div>` : ''}
         <div class="summary-row total"><span>Total</span><span>${formatMoney(sale.total, settings)}</span></div>
       `, { large: true });
+      const reprintBtn = document.getElementById('modal-reprint-btn');
+      if (reprintBtn) reprintBtn.addEventListener('click', () => Receipt.print(sale, settings));
     } catch (err) {
       Toast.error(err.message);
     }
