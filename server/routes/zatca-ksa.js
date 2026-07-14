@@ -5,12 +5,12 @@
 const express = require('express');
 const db = require('../db');
 const { requireLogin, requireAdmin } = require('../helpers');
-const { encrypt, decrypt } = require('./secret-store');
-const { generateCsr, generateEgsSerial } = require('./csr');
-const { requestComplianceCsid, runComplianceCheck, requestProductionCsid } = require('./onboarding');
-const { buildSimplifiedInvoiceXml } = require('./ubl-invoice');
-const { signInvoice } = require('./sign');
-const { ZERO_HASH_BASE64 } = require('./report-sale');
+const { encrypt, decrypt } = require('../zatca/secret-store');
+const { generateCsr, generateEgsSerial } = require('../zatca/csr');
+const { requestComplianceCsid, runComplianceCheck, requestProductionCsid } = require('../zatca/onboarding');
+const { buildSimplifiedInvoiceXml } = require('../zatca/ubl-invoice');
+const { signInvoice } = require('../zatca/sign');
+const { ZERO_HASH_BASE64 } = require('../zatca/report-sale');
 
 const router = express.Router();
 
@@ -204,7 +204,7 @@ router.post('/zatca-ksa/retry/:logId', requireLogin, requireAdmin, async (req, r
   const entry = db.getById('zatca_invoice_log', req.params.logId);
   if (!entry || entry.status !== 'report_error') return res.status(400).json({ error: 'Nothing to retry for this entry.' });
   const cfg = getCfg();
-  const { reportInvoice } = require('./report');
+  const { reportInvoice } = require('../zatca/report');
   try {
     const result = await reportInvoice({
       env: cfg.environment,
