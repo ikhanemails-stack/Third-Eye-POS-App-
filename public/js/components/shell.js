@@ -22,6 +22,7 @@ const Shell = {
     { section: 'Administration' },
     { path: '/users', label: 'Staff Accounts', icon: 'users', adminOnly: true },
     { path: '/backup', label: 'Backup & Restore', icon: 'backup', adminOnly: true },
+    { path: '/zatca-ksa', label: 'ZATCA (Saudi Arabia)', icon: 'settings', adminOnly: true },
     { path: '/settings', label: 'Settings', icon: 'settings' },
   ],
 

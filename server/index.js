@@ -35,6 +35,7 @@ app.use('/api', requireLicense, require('./routes/vendors'));
 app.use('/api', requireLicense, require('./routes/expiry'));
 app.use('/api', requireLicense, require('./routes/employees'));
 app.use('/api', requireLicense, require('./routes/backup'));
+app.use('/api', requireLicense, require('./routes/zatca-ksa'));
 
 app.get('/ping', (req, res) => res.json({ ok: true, db: db.isMongo ? 'mongodb' : 'local' }));
 

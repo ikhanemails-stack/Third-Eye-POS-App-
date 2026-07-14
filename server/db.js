@@ -174,7 +174,8 @@ const db = {
       'expiry_items','returns','reminders','cash_sessions',
       'purchases','purchase_items','stock_movements',
       'licenses',  // ← ADDED: Make sure licenses are loaded!
-      'backup_recipients'
+      'backup_recipients',
+      'zatca_ksa', 'zatca_invoice_log'
     ];
     
     for (const t of tables) {

@@ -5,6 +5,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireLogin, requireAdmin, roundMoney } = require('../helpers');
+const { reportSaleToZatcaKsa } = require('../zatca/report-sale');
 
 const router = express.Router();
 
@@ -219,6 +220,13 @@ router.post('/sales', requireLogin, (req, res) => {
   }
 
   res.json({ ...sale, items: result.lineItems, delivery });
+
+  // Fire-and-forget: only does anything if this shop has completed ZATCA
+  // KSA onboarding (see Settings > ZATCA Saudi Arabia). Never awaited here
+  // and any failure is caught inside reportSaleToZatcaKsa itself, so a slow
+  // or unreachable ZATCA server can never delay or break a checkout.
+  reportSaleToZatcaKsa({ ...sale, items: result.lineItems }, customer, settings)
+    .catch(e => console.error('[zatca-ksa] Unexpected error reporting sale', sale.invoiceNo, e));
 });
 
 // Refund a sale (full refund) - restocks items and records a negative sale entry.

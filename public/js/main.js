@@ -61,6 +61,7 @@ const App = {
     Router.register('/settings', () => SettingsScreen.render());
     Router.register('/users', () => UsersScreen.render());
     Router.register('/backup', () => BackupScreen.render());
+    Router.register('/zatca-ksa', () => ZatcaKsaScreen.render());
   }
 };
 

@@ -120,6 +120,8 @@ async function seed() {
   db.ensureTable('purchase_items', []);
   db.ensureTable('purchases', []);
   db.ensureTable('stock_movements', []);
+  db.ensureTable('zatca_ksa', []);
+  db.ensureTable('zatca_invoice_log', []);
 
   console.log('✅ Database initialized with default data (FIRST RUN ONLY).');
 }
