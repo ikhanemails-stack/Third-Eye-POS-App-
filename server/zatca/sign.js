@@ -14,27 +14,21 @@
 const crypto = require('crypto');
 const forge = require('node-forge');
 
-let c14n;
-try {
-  // Proper W3C XML Canonicalization, if the optional dependency installed
-  // cleanly. Falls back to a lightweight approximation otherwise (fine for
-  // our own deterministically-generated XML, but not a general C14N impl).
-  c14n = require('xml-c14n')().createCanonicaliser('http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
-} catch {
-  c14n = null;
-}
-
-async function canonicalize(xml) {
-  if (c14n) {
-    try {
-      return await c14n.canonicalise(xml);
-    } catch {
-      // fall through to the naive path below
-    }
-  }
-  // Naive fallback: our generator never emits comments or insignificant
-  // attribute-order variation, so collapsing inter-tag whitespace is a
-  // reasonable approximation of C14N for a fixed, self-generated document.
+/**
+ * Canonicalizes the invoice XML before hashing.
+ *
+ * NOTE: this is NOT a full W3C XML C14N implementation - it's a
+ * deterministic normalisation (collapses insignificant inter-tag
+ * whitespace) that's safe because ubl-invoice.js always generates this XML
+ * the same way (fixed attribute order, no comments, no variable
+ * whitespace). That's sufficient for our own hash-then-sign-then-verify
+ * round trip, but ZATCA's own validators may apply true C14N when checking
+ * your signature. If ZATCA's Sandbox reports a signature/digest mismatch,
+ * that's the first place to look - swap this for a proper canonicalizer,
+ * e.g. `xml-crypto` (npm) with `xmldom` for DOM parsing, or shell out to
+ * `xmllint --c14n` if it's available on your server.
+ */
+function canonicalize(xml) {
   return xml.replace(/>\s+</g, '><').trim();
 }
 

@@ -21,10 +21,9 @@ needed, not a legal requirement in Bahrain).
 
 ## One-time server setup
 
-1. **Install dependencies** - already added to `package.json`
-   (`node-forge` for certificate handling, `xml-c14n` for XML
-   canonicalization). Just run `npm install` on deploy; Railway does this
-   automatically on every push.
+1. **Install dependencies** - `node-forge` (certificate/CSR handling) is
+   already added to `package.json`. Just run `npm install` on deploy;
+   Railway does this automatically on every push.
 2. **`openssl` must be on the server** for CSR generation
    (`server/zatca/csr.js` shells out to it). It's present by default on
    Railway's Node buildpack image; if you ever move hosts, confirm it's
@@ -59,7 +58,14 @@ the exact `ext:UBLExtensions`/`ds:Signature` XML block and the XML
 canonicalization ZATCA expects. This follows the structure of ZATCA's
 published sample invoices and community reference implementations, but:
 
-- ZATCA has changed this structure before, and may again.
+- **Canonicalization is simplified, not a full W3C C14N implementation**
+  (see the comment at the top of `canonicalize()` in `sign.js`). It's safe
+  for our own hash-then-sign round trip since the XML is always generated
+  the same way, but if ZATCA's Sandbox reports a signature/digest
+  mismatch, this is the first place to look - swap in a proper
+  canonicalizer (e.g. `xml-crypto` + `xmldom`, or shelling out to
+  `xmllint --c14n`) at that point.
+- ZATCA has changed the XML structure before, and may again.
 - The CSR fields in `server/zatca/csr.js` (subject fields, certificate
   template OID) should be cross-checked against the current CSR
   Generation Tool template on the Fatoora developer portal.
