@@ -36,6 +36,12 @@ const SettingsScreen = {
     if (hint) hint.textContent = cfg.note;
     const authorityEl = document.getElementById('country-authority');
     if (authorityEl) authorityEl.textContent = `Tax authority: ${cfg.authority}`;
+    const crLabelEl = document.getElementById('s-crNumber-label');
+    if (crLabelEl) crLabelEl.textContent = cfg.crLabel || 'CR Number (Commercial Registration)';
+    const vatNumberLabelEl = document.getElementById('s-vatNumber-label');
+    if (vatNumberLabelEl) vatNumberLabelEl.textContent = cfg.vatNumberLabel || 'VAT Registration Number';
+    const vatRateLabelEl = document.getElementById('s-vatRate-label');
+    if (vatRateLabelEl) vatRateLabelEl.textContent = `${cfg.vatLabel || 'VAT'} Rate (%)`;
     this.updateLivePreview?.();
   },
 
@@ -107,17 +113,17 @@ const SettingsScreen = {
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">CR Number (Commercial Registration)</label>
+              <label class="form-label" id="s-crNumber-label">${escapeHtml(this.taxConfig?.[s.country]?.crLabel || 'CR Number (Commercial Registration)')}</label>
               <input class="form-input" id="s-crNumber" value="${escapeHtml(s.crNumber || '')}" ${!isAdmin ? 'disabled' : ''}>
             </div>
             <div class="form-group">
-              <label class="form-label">VAT Registration Number</label>
+              <label class="form-label" id="s-vatNumber-label">${escapeHtml(this.taxConfig?.[s.country]?.vatNumberLabel || 'VAT Registration Number')}</label>
               <input class="form-input" id="s-vatNumber" value="${escapeHtml(s.vatNumber || '')}" ${!isAdmin ? 'disabled' : ''}>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">VAT Rate (%)</label>
+              <label class="form-label" id="s-vatRate-label">${escapeHtml(this.taxConfig?.[s.country]?.vatLabel || 'VAT')} Rate (%)</label>
               <input class="form-input" id="s-vatRate" type="number" step="0.1" value="${s.vatRate}" ${!isAdmin ? 'disabled' : ''}>
               <div class="form-hint">Auto-filled from Country above - you can still adjust it manually if a special rate applies.</div>
             </div>
@@ -129,10 +135,13 @@ const SettingsScreen = {
           ${s.country === 'SA' ? `<div class="card" style="background:var(--warning-bg,#FFF7E8);border-color:#ECD6AE;font-size:0.8rem;color:#7a5710;margin-top:4px">
             Saudi Arabia selected: every receipt will now print a ZATCA "Simplified Tax Invoice" QR code automatically (Phase 1). Full ZATCA Phase 2 real-time reporting requires onboarding your business directly with ZATCA to get API credentials - that step happens outside this app, on ZATCA's own portal.
           </div>` : ''}
+          ${s.country === 'IN' ? `<div class="card" style="background:var(--warning-bg,#FFF7E8);border-color:#ECD6AE;font-size:0.8rem;color:#7a5710;margin-top:4px">
+            India selected: the app now uses GST terminology (GSTIN/PAN fields, "GST" instead of "VAT" on screen and on receipts), INR currency with 2 decimal places, and a common 18% default slab. Real GST has multiple slabs (0/5/12/18/28%) by product HSN code and splits into CGST+SGST (same state) or IGST (different state) - this app prints one combined GST line rather than that breakdown, so adjust the rate to your actual product mix.
+          </div>` : ''}
           <div class="form-group">
             <label class="form-label">Currency Decimal Places</label>
             <input class="form-input" id="s-currencyDecimals" type="number" min="0" max="4" value="${s.currencyDecimals}" ${!isAdmin ? 'disabled' : ''}>
-            <div class="form-hint">Bahraini Dinar (BHD) uses 3 decimal places, e.g. 1.250 BHD.</div>
+            <div class="form-hint" id="s-currencyDecimals-hint">${escapeHtml(this.taxConfig?.[s.country]?.currency || s.currency || '')} uses ${s.currencyDecimals} decimal place${s.currencyDecimals === 1 ? '' : 's'}, e.g. ${(1).toFixed(s.currencyDecimals)} ${escapeHtml(this.taxConfig?.[s.country]?.currency || s.currency || '')}.</div>
           </div>
         </div>
 
@@ -321,6 +330,7 @@ const SettingsScreen = {
       vatNumber: document.getElementById('s-vatNumber')?.value.trim(),
       country,
       vatLabel: cfg?.vatLabel || this.settings.vatLabel || 'VAT',
+      crLabelShort: cfg?.crLabelShort || this.settings.crLabelShort || 'CR',
       requiresZatcaQr: cfg ? cfg.requiresZatcaQr : !!this.settings.requiresZatcaQr,
       taxAuthority: cfg?.authority || this.settings.taxAuthority || '',
       vatRate: Number(document.getElementById('s-vatRate')?.value) || this.settings.vatRate,
@@ -379,6 +389,7 @@ const SettingsScreen = {
       // Denormalized onto the settings document itself so checkout/receipt
       // code never has to look up the country table again - see tax-config.js.
       vatLabel: cfg?.vatLabel || 'VAT',
+      crLabelShort: cfg?.crLabelShort || 'CR',
       requiresZatcaQr: cfg ? cfg.requiresZatcaQr : false,
       taxAuthority: cfg?.authority || '',
       vatRate: Number(document.getElementById('s-vatRate').value),

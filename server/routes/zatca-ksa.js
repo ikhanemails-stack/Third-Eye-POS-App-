@@ -14,6 +14,17 @@ const { ZERO_HASH_BASE64 } = require('./report-sale');
 
 const router = express.Router();
 
+// ZATCA Phase 2 is Saudi-Arabia-specific. Block every route below for shops
+// configured with any other country, even if someone calls the API directly.
+router.use((req, res, next) => {
+  db.ensureTable('settings', []);
+  const shop = db.all('settings')[0];
+  if (shop && shop.country && shop.country !== 'SA') {
+    return res.status(403).json({ error: 'ZATCA (Saudi Arabia) is only available when the shop country is set to Saudi Arabia.' });
+  }
+  next();
+});
+
 function getCfg() {
   db.ensureTable('zatca_ksa', []);
   let cfg = db.all('zatca_ksa')[0];

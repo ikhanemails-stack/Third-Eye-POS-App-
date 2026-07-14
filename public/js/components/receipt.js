@@ -81,7 +81,7 @@ const Receipt = {
   <div style="font-size:${shopSize}px;font-weight:${fwShop};letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">${escapeHtmlR(settings.shopName||'My Supermarket')}</div>
   ${settings.address?`<div style="font-size:${base}px">${escapeHtmlR(settings.address)}</div>`:''}
   ${settings.phone?`<div style="font-size:${base}px">Tel: ${escapeHtmlR(settings.phone)}</div>`:''}
-  ${settings.crNumber?`<div style="font-size:${base}px">CR: ${escapeHtmlR(settings.crNumber)}</div>`:''}
+  ${settings.crNumber?`<div style="font-size:${base}px">${escapeHtmlR(settings.crLabelShort||'CR')}: ${escapeHtmlR(settings.crNumber)}</div>`:''}
   ${settings.vatNumber?`<div style="font-size:${base}px">${escapeHtmlR(settings.vatLabel||'VAT')} No: ${escapeHtmlR(settings.vatNumber)}</div>`:''}
   ${headerHtml}
   <div style="display:inline-block;border:2px solid #000;border-radius:20px;padding:3px 16px;font-size:${base}px;font-weight:${fwShop};margin:6px 0 4px;letter-spacing:1px">${((sale.orderType||'walk_in').replace(/_/g,'-')).toUpperCase()}</div>

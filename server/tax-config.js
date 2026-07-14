@@ -47,43 +47,78 @@
 //
 // - Kuwait (KW): VAT has NOT been implemented yet. Rate set to 0 for the
 //   same reason as Qatar.
+//
+// - India (IN): NOT a GCC country, added as a separate tax regime - GST
+//   (Goods and Services Tax), not VAT. Regulators: CBIC (Central Board of
+//   Indirect Taxes and Customs) + GSTN. Standard/default slab shown here is
+//   18% (the most common GST slab for general retail/supermarket goods),
+//   but real GST has MULTIPLE slabs (0%/5%/12%/18%/28%) that vary by product
+//   HSN code - the admin should adjust the VAT Rate field per their actual
+//   product mix, same as any other country's "special rate" case.
+//   IMPORTANT SIMPLIFICATION: India's GST law splits a sale into CGST+SGST
+//   (intra-state) or IGST (inter-state) - this app prints a single combined
+//   "GST" line on the receipt rather than splitting it into those
+//   components. That's correct for a single-state supermarket's receipts in
+//   spirit/total but is NOT a full GSTIN-compliant tax-invoice breakdown.
+//   crLabel/vatNumberLabel below relabel the identity fields to India's
+//   actual documents (PAN / GSTIN) instead of the GCC "CR / VAT No." wording.
 
 const COUNTRY_TAX_CONFIG = {
   BH: {
     code: 'BH', name: 'Bahrain', currency: 'BHD', currencyDecimals: 3,
     vatRate: 10, vatLabel: 'VAT', vatLive: true, requiresZatcaQr: false,
     authority: 'National Bureau for Revenue (NBR)',
-    note: 'Bahrain standard VAT rate is 10%.'
+    note: 'Bahrain standard VAT rate is 10%.',
+    crLabel: 'CR Number (Commercial Registration)', crLabelShort: 'CR',
+    vatNumberLabel: 'VAT Registration Number'
   },
   SA: {
     code: 'SA', name: 'Saudi Arabia', currency: 'SAR', currencyDecimals: 2,
     vatRate: 15, vatLabel: 'VAT (ZATCA)', vatLive: true, requiresZatcaQr: true,
     authority: 'Zakat, Tax and Customs Authority (ZATCA)',
-    note: 'Saudi Arabia standard VAT is 15%. A ZATCA Phase 1 simplified tax invoice QR code will be added to every receipt automatically.'
+    note: 'Saudi Arabia standard VAT is 15%. A ZATCA Phase 1 simplified tax invoice QR code will be added to every receipt automatically.',
+    crLabel: 'CR Number (Commercial Registration)', crLabelShort: 'CR',
+    vatNumberLabel: 'VAT Registration Number'
   },
   AE: {
     code: 'AE', name: 'United Arab Emirates', currency: 'AED', currencyDecimals: 2,
     vatRate: 5, vatLabel: 'VAT', vatLive: true, requiresZatcaQr: false,
     authority: 'Federal Tax Authority (FTA)',
-    note: 'UAE standard VAT rate is 5%.'
+    note: 'UAE standard VAT rate is 5%.',
+    crLabel: 'CR Number (Commercial Registration)', crLabelShort: 'CR',
+    vatNumberLabel: 'VAT Registration Number'
   },
   OM: {
     code: 'OM', name: 'Oman', currency: 'OMR', currencyDecimals: 3,
     vatRate: 5, vatLabel: 'VAT', vatLive: true, requiresZatcaQr: false,
     authority: 'Oman Tax Authority (OTA)',
-    note: 'Oman standard VAT rate is 5%.'
+    note: 'Oman standard VAT rate is 5%.',
+    crLabel: 'CR Number (Commercial Registration)', crLabelShort: 'CR',
+    vatNumberLabel: 'VAT Registration Number'
   },
   QA: {
     code: 'QA', name: 'Qatar', currency: 'QAR', currencyDecimals: 2,
     vatRate: 0, vatLabel: 'VAT (not yet in force)', vatLive: false, requiresZatcaQr: false,
     authority: 'General Tax Authority (GTA)',
-    note: 'Qatar has not implemented VAT yet as of 2026. Rate is set to 0% - update this once the GTA formally launches VAT (expected ~5%).'
+    note: 'Qatar has not implemented VAT yet as of 2026. Rate is set to 0% - update this once the GTA formally launches VAT (expected ~5%).',
+    crLabel: 'CR Number (Commercial Registration)', crLabelShort: 'CR',
+    vatNumberLabel: 'VAT Registration Number'
   },
   KW: {
     code: 'KW', name: 'Kuwait', currency: 'KWD', currencyDecimals: 3,
     vatRate: 0, vatLabel: 'VAT (not yet in force)', vatLive: false, requiresZatcaQr: false,
     authority: 'Kuwait Tax Authority',
-    note: 'Kuwait has not implemented VAT yet. Rate is set to 0% - update this once VAT is formally enacted.'
+    note: 'Kuwait has not implemented VAT yet. Rate is set to 0% - update this once VAT is formally enacted.',
+    crLabel: 'CR Number (Commercial Registration)', crLabelShort: 'CR',
+    vatNumberLabel: 'VAT Registration Number'
+  },
+  IN: {
+    code: 'IN', name: 'India', currency: 'INR', currencyDecimals: 2,
+    vatRate: 18, vatLabel: 'GST', vatLive: true, requiresZatcaQr: false,
+    authority: 'Central Board of Indirect Taxes and Customs (CBIC) / GSTN',
+    note: 'India uses GST, not VAT. 18% is shown as the common retail slab, but real GST has multiple slabs (0/5/12/18/28%) by product HSN code - adjust the rate to match your product mix. Receipts show a single combined GST line rather than a CGST/SGST/IGST breakdown.',
+    crLabel: 'PAN Number', crLabelShort: 'PAN',
+    vatNumberLabel: 'GSTIN (GST Identification Number)'
   }
 };
 

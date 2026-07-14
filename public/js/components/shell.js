@@ -22,7 +22,7 @@ const Shell = {
     { section: 'Administration' },
     { path: '/users', label: 'Staff Accounts', icon: 'users', adminOnly: true },
     { path: '/backup', label: 'Backup & Restore', icon: 'backup', adminOnly: true },
-    { path: '/zatca-ksa', label: 'ZATCA (Saudi Arabia)', icon: 'settings', adminOnly: true },
+    { path: '/zatca-ksa', label: 'ZATCA (Saudi Arabia)', icon: 'settings', adminOnly: true, countryOnly: 'SA' },
     { path: '/settings', label: 'Settings', icon: 'settings' },
   ],
 
@@ -41,6 +41,10 @@ const Shell = {
         return `<div class="nav-section-label">${item.section}</div>`;
       }
       if (item.adminOnly && user.role !== 'admin') return '';
+      // Country-gated nav items (e.g. ZATCA is Saudi-only) - only show when
+      // the shop's configured country matches. Defaults to hidden until
+      // settings have loaded, so it never flashes on for the wrong country.
+      if (item.countryOnly && settings.country !== item.countryOnly) return '';
       const active = activePath === item.path ? 'active' : '';
       return `<a href="#${item.path}" class="nav-item ${active}">
         <span style="width:18px;height:18px;display:flex">${Icon[item.icon]}</span>

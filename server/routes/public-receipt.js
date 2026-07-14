@@ -19,7 +19,7 @@ function getPublicSettings() {
   const s = db.all('settings')[0] || {};
   return {
     shopName: s.shopName, address: s.address, phone: s.phone,
-    crNumber: s.crNumber, vatNumber: s.vatNumber, vatLabel: s.vatLabel,
+    crNumber: s.crNumber, crLabelShort: s.crLabelShort, vatNumber: s.vatNumber, vatLabel: s.vatLabel,
     vatRate: s.vatRate, currency: s.currency, currencyDecimals: s.currencyDecimals,
     logoDataUrl: s.logoDataUrl, receiptHeader: s.receiptHeader, receiptFooter: s.receiptFooter,
     receiptShowLogo: s.receiptShowLogo, receiptPaperWidth: s.receiptPaperWidth,

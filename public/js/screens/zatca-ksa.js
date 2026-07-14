@@ -7,6 +7,15 @@ const ZatcaKsaScreen = {
   status: null,
 
   async render() {
+    // ZATCA Phase 2 is Saudi-Arabia-only. The sidebar link is already hidden
+    // for other countries, but guard the screen itself too in case someone
+    // reaches this URL directly (e.g. an old bookmark or browser back button
+    // from before the country was changed away from Saudi Arabia).
+    if ((App.settings?.country || 'BH') !== 'SA') {
+      Toast.error('ZATCA (Saudi Arabia) is only available when the shop country is set to Saudi Arabia.');
+      Router.navigate('/settings');
+      return;
+    }
     Shell.mount('/zatca-ksa', `<div class="empty-state">Loading...</div>`);
     try {
       this.status = await Api.get('/zatca-ksa/status');
