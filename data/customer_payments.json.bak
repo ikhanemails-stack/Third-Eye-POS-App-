@@ -1,0 +1,13 @@
+[
+  {
+    "id": 1,
+    "createdAt": "2026-07-11T21:38:42.951Z",
+    "updatedAt": "2026-07-11T21:38:42.951Z",
+    "customerId": 2,
+    "customerName": "IMRAN",
+    "amount": 0.65,
+    "method": "cash",
+    "collectedBy": 1,
+    "collectedByName": "Admin"
+  }
+]

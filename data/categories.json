@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "createdAt": "2026-07-13T20:30:33.824Z",
+    "updatedAt": "2026-07-13T20:30:33.824Z",
+    "name": "Groceries"
+  },
+  {
+    "id": 2,
+    "createdAt": "2026-07-13T20:30:33.827Z",
+    "updatedAt": "2026-07-13T20:30:33.827Z",
+    "name": "Beverages"
+  },
+  {
+    "id": 3,
+    "createdAt": "2026-07-13T20:30:33.831Z",
+    "updatedAt": "2026-07-13T20:30:33.831Z",
+    "name": "Dairy"
+  },
+  {
+    "id": 4,
+    "createdAt": "2026-07-13T20:30:33.833Z",
+    "updatedAt": "2026-07-13T20:30:33.833Z",
+    "name": "Bakery"
+  },
+  {
+    "id": 5,
+    "createdAt": "2026-07-13T20:30:33.837Z",
+    "updatedAt": "2026-07-13T20:30:33.837Z",
+    "name": "Household"
+  },
+  {
+    "id": 6,
+    "createdAt": "2026-07-13T20:30:33.839Z",
+    "updatedAt": "2026-07-13T20:30:33.839Z",
+    "name": "Personal Care"
+  }
+]

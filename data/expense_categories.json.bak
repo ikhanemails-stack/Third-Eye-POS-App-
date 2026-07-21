@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "createdAt": "2026-07-13T20:30:33.874Z",
+    "updatedAt": "2026-07-13T20:30:33.874Z",
+    "name": "Rent"
+  },
+  {
+    "id": 2,
+    "createdAt": "2026-07-13T20:30:33.877Z",
+    "updatedAt": "2026-07-13T20:30:33.877Z",
+    "name": "Salaries"
+  },
+  {
+    "id": 3,
+    "createdAt": "2026-07-13T20:30:33.880Z",
+    "updatedAt": "2026-07-13T20:30:33.880Z",
+    "name": "Utilities"
+  },
+  {
+    "id": 4,
+    "createdAt": "2026-07-13T20:30:33.882Z",
+    "updatedAt": "2026-07-13T20:30:33.882Z",
+    "name": "Maintenance"
+  },
+  {
+    "id": 5,
+    "createdAt": "2026-07-13T20:30:33.885Z",
+    "updatedAt": "2026-07-13T20:30:33.885Z",
+    "name": "Transport"
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "createdAt": "2026-07-13T20:31:57.962Z",
+    "updatedAt": "2026-07-13T20:31:57.962Z",
+    "productId": 4,
+    "type": "sale",
+    "quantity": -1,
+    "note": "Sale INV-1783974717934",
+    "userId": 1
+  }
+]

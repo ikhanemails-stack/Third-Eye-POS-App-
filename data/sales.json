@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "createdAt": "2026-07-13T20:31:57.935Z",
+    "updatedAt": "2026-07-13T20:31:57.935Z",
+    "invoiceNo": "INV-1783974717934",
+    "customerId": 1,
+    "orderType": "walk_in",
+    "subtotal": 0.79,
+    "vatTotal": 0.11,
+    "discount": 0,
+    "couponCode": null,
+    "pointsRedeemed": 0,
+    "total": 0.9,
+    "paymentMethod": "cash",
+    "amountPaid": 0.9,
+    "changeDue": 0,
+    "notes": "",
+    "cashierId": 1,
+    "cashierName": "Admin",
+    "status": "completed"
+  }
+]

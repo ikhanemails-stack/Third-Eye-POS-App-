@@ -1,0 +1,31 @@
+[
+  {
+    "id": 1,
+    "shopName": "My Supermarket",
+    "shopNameAr": "",
+    "logoDataUrl": "",
+    "address": "",
+    "phone": "",
+    "email": "",
+    "crNumber": "",
+    "vatNumber": "",
+    "country": "BH",
+    "vatRate": 10,
+    "vatLabel": "VAT",
+    "requiresZatcaQr": false,
+    "taxAuthority": "National Bureau for Revenue (NBR)",
+    "currency": "BHD",
+    "currencyDecimals": 3,
+    "language": "en",
+    "receiptFooter": "Thank you for shopping with us!",
+    "receiptHeader": "",
+    "receiptFontWeight": "normal",
+    "lowStockThreshold": 10,
+    "receiptPaperWidth": "80mm",
+    "receiptFontSize": "normal",
+    "receiptShowLogo": true,
+    "loyaltyEnabled": true,
+    "loyaltyEarnRate": 1,
+    "loyaltyRedemptionRate": 0.01
+  }
+]

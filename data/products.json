@@ -1,0 +1,80 @@
+[
+  {
+    "id": 1,
+    "createdAt": "2026-07-13T20:30:33.844Z",
+    "updatedAt": "2026-07-13T20:30:33.844Z",
+    "name": "Basmati Rice 5kg",
+    "barcode": "6291003023310",
+    "categoryId": 1,
+    "costPrice": 3.5,
+    "sellPrice": 4.25,
+    "stock": 50,
+    "unit": "bag",
+    "vatApplicable": true
+  },
+  {
+    "id": 2,
+    "createdAt": "2026-07-13T20:30:33.849Z",
+    "updatedAt": "2026-07-13T20:30:33.849Z",
+    "name": "Cooking Oil 1.5L",
+    "barcode": "6291003045304",
+    "categoryId": 1,
+    "costPrice": 1.8,
+    "sellPrice": 2.3,
+    "stock": 40,
+    "unit": "bottle",
+    "vatApplicable": true
+  },
+  {
+    "id": 3,
+    "createdAt": "2026-07-13T20:30:33.852Z",
+    "updatedAt": "2026-07-13T20:31:57.980Z",
+    "name": "Mineral Water 1.5L",
+    "barcode": "6291003067405",
+    "categoryId": 2,
+    "costPrice": 0.15,
+    "sellPrice": 0.25,
+    "stock": 199,
+    "unit": "bottle",
+    "vatApplicable": true
+  },
+  {
+    "id": 4,
+    "createdAt": "2026-07-13T20:30:33.855Z",
+    "updatedAt": "2026-07-13T20:31:57.955Z",
+    "name": "Fresh Milk 1L",
+    "barcode": "6291003089305",
+    "categoryId": 3,
+    "costPrice": 0.5,
+    "sellPrice": 0.65,
+    "stock": 7,
+    "unit": "carton",
+    "vatApplicable": true
+  },
+  {
+    "id": 5,
+    "createdAt": "2026-07-13T20:30:33.857Z",
+    "updatedAt": "2026-07-13T20:30:33.857Z",
+    "name": "White Bread",
+    "barcode": "6291003012406",
+    "categoryId": 4,
+    "costPrice": 0.25,
+    "sellPrice": 0.4,
+    "stock": 30,
+    "unit": "pack",
+    "vatApplicable": true
+  },
+  {
+    "id": 6,
+    "createdAt": "2026-07-13T20:30:33.861Z",
+    "updatedAt": "2026-07-13T20:30:33.861Z",
+    "name": "Dish Soap 750ml",
+    "barcode": "6291003034508",
+    "categoryId": 5,
+    "costPrice": 0.7,
+    "sellPrice": 0.95,
+    "stock": 5,
+    "unit": "bottle",
+    "vatApplicable": true
+  }
+]

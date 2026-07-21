@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "createdAt": "2026-07-13T20:31:57.945Z",
+    "updatedAt": "2026-07-13T20:31:57.945Z",
+    "saleId": 1,
+    "productId": 4,
+    "productName": "Fresh Milk 1L",
+    "barcode": "6291003089305",
+    "quantity": 1,
+    "unitPrice": 0.65,
+    "vatApplicable": true,
+    "lineVat": 0.08,
+    "lineTotal": 0.65
+  },
+  {
+    "id": 2,
+    "createdAt": "2026-07-13T20:31:57.970Z",
+    "updatedAt": "2026-07-13T20:31:57.970Z",
+    "saleId": 1,
+    "productId": 3,
+    "productName": "Mineral Water 1.5L",
+    "barcode": "6291003067405",
+    "quantity": 1,
+    "unitPrice": 0.25,
+    "vatApplicable": true,
+    "lineVat": 0.03,
+    "lineTotal": 0.25
+  }
+]

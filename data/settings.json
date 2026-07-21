@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "shopName": "My Supermarket",
+    "shopNameAr": "",
+    "logoDataUrl": "",
+    "address": "",
+    "phone": "",
+    "email": "",
+    "crNumber": "",
+    "vatNumber": "",
+    "country": "SA",
+    "vatRate": 15,
+    "vatLabel": "VAT (ZATCA)",
+    "requiresZatcaQr": true,
+    "taxAuthority": "Zakat, Tax and Customs Authority (ZATCA)",
+    "currency": "SAR",
+    "currencyDecimals": 2,
+    "language": "en",
+    "receiptFooter": "Thank you for shopping with us!",
+    "receiptHeader": "",
+    "receiptFontWeight": "normal",
+    "lowStockThreshold": 10,
+    "receiptPaperWidth": "80mm",
+    "receiptFontSize": "normal",
+    "receiptShowLogo": true,
+    "loyaltyEnabled": true,
+    "loyaltyEarnRate": 1,
+    "loyaltyRedemptionRate": 0.01,
+    "updatedAt": "2026-07-13T20:31:32.862Z"
+  }
+]

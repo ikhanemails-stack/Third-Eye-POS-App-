@@ -1,0 +1,13 @@
+[
+  {
+    "id": 1,
+    "createdAt": "2026-07-13T20:31:54.720Z",
+    "updatedAt": "2026-07-13T20:31:54.720Z",
+    "name": "ikha",
+    "phone": "",
+    "address": "",
+    "balance": 0,
+    "loyaltyPoints": 0,
+    "creditLimit": 0
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "createdAt": "2026-07-11T21:35:18.556Z",
+    "updatedAt": "2026-07-11T21:41:32.903Z",
+    "saleId": 1,
+    "customerId": 1,
+    "customerName": "IKHAN",
+    "customerPhone": "39537101",
+    "address": "EKER",
+    "driverId": "1",
+    "deliveryFee": 0,
+    "notes": "",
+    "status": "delivered",
+    "paid": false,
+    "deliveredAt": "2026-07-11T21:41:32.902Z"
+  }
+]

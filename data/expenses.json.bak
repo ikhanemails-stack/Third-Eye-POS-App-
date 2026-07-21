@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "createdAt": "2026-07-09T16:25:49.187Z",
+    "updatedAt": "2026-07-09T16:25:49.187Z",
+    "categoryId": null,
+    "amount": 300,
+    "description": "shop rent",
+    "date": "2026-07-09",
+    "userId": 1
+  }
+]
