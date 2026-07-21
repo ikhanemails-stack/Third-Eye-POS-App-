@@ -1,0 +1,1609 @@
+/* ===========================================================
+   Third Eye Computer Solutions - POS System
+   Design tokens & global styles
+   =========================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
+
+:root {
+  /* Color */
+  --navy-900: #0F2A3D;
+  --navy-800: #16384F;
+  --navy-700: #1E4A66;
+  --navy-600: #2A5C7D;
+  --gold-600: #B08A1C;
+  --gold-500: #C9A227;
+  --gold-400: #DAB94A;
+  --gold-300: #E8CD78;
+  --gold-100: #FBF3DC;
+  --bg: #F4F6F9;
+  --surface: #FFFFFF;
+  --surface-raised: #FBFCFD;
+  --border: #E2E5EA;
+  --text-primary: #1C2530;
+  --text-secondary: #5B6675;
+  --text-muted: #8993A1;
+  --success: #1F8A4C;
+  --success-600: #197A40;
+  --success-bg: #E7F5EC;
+  --danger: #D14545;
+  --danger-600: #BC3838;
+  --danger-bg: #FBEAEA;
+  --warning: #C97A1B;
+  --warning-bg: #FBF1E2;
+
+  /* Gradients - the signature "premium retail" look */
+  --gradient-navy: linear-gradient(135deg, #143850 0%, #0F2A3D 100%);
+  --gradient-gold: linear-gradient(135deg, #DAB94A 0%, #C9A227 55%, #B08A1C 100%);
+  --gradient-gold-hover: linear-gradient(135deg, #E8CD78 0%, #DAB94A 55%, #C9A227 100%);
+  --gradient-success: linear-gradient(135deg, #2BA862 0%, #1F8A4C 100%);
+  --gradient-danger: linear-gradient(135deg, #DE5C5C 0%, #D14545 100%);
+  --gradient-surface-hover: linear-gradient(180deg, #FFFFFF 0%, #FBFCFD 100%);
+
+  /* Type */
+  --font-display: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Layout */
+  --sidebar-w: 232px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --shadow-sm: 0 1px 3px rgba(15, 42, 61, 0.07);
+  --shadow-md: 0 6px 20px rgba(15, 42, 61, 0.10);
+  --shadow-lg: 0 16px 40px rgba(15, 42, 61, 0.16);
+  --shadow-gold: 0 4px 14px rgba(201, 162, 39, 0.32);
+  --shadow-navy: 0 4px 14px rgba(15, 42, 61, 0.28);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  background: radial-gradient(circle at top right, #F8F9FB 0%, var(--bg) 55%);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+#app { min-height: 100vh; }
+
+a { color: inherit; text-decoration: none; }
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input, select, textarea {
+  font-family: var(--font-body);
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D5D9E0; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #BFC5CE; }
+
+/* ---------- Money / price display (signature element) ---------- */
+.money {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.money .currency-tag {
+  font-size: 0.62em;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 4px;
+  vertical-align: middle;
+  letter-spacing: 0.04em;
+}
+.money.positive { color: var(--success); }
+.money.negative { color: var(--danger); }
+.money.lg { font-size: 1.5rem; }
+.money.xl { font-size: 2.1rem; }
+
+/* ---------- App shell ---------- */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--gradient-navy);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  box-shadow: 4px 0 24px rgba(15, 42, 61, 0.18);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 20px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar-brand .shop-logo {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--gold-500);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-gold);
+}
+
+.sidebar-brand .shop-logo-fallback {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: var(--gradient-gold);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--navy-900);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-gold);
+}
+
+.sidebar-brand .shop-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 14px 12px;
+  overflow-y: auto;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  color: rgba(255,255,255,0.72);
+  font-size: 0.89rem;
+  font-weight: 500;
+  margin-bottom: 2px;
+  transition: background 0.15s, color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+.nav-item:hover {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  transform: translateX(2px);
+}
+
+.nav-item.active {
+  background: var(--gradient-gold);
+  color: var(--navy-900);
+  font-weight: 600;
+  box-shadow: var(--shadow-gold);
+  transform: translateX(2px);
+}
+
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+.nav-section-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.35);
+  padding: 16px 14px 6px;
+  font-weight: 600;
+}
+
+.sidebar-footer {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.76rem;
+  color: rgba(255,255,255,0.4);
+}
+
+.main-area {
+  flex: 1;
+  margin-left: var(--sidebar-w);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+#offline-banner {
+  position: sticky; top: 0; z-index: 200;
+  background: #b45309; color: #fff; text-align: center;
+  font-size: 0.8rem; font-weight: 600; padding: 8px 16px;
+}
+body.is-offline .topbar { top: 0; }
+
+.topbar {
+  height: 64px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 1px 0 rgba(15, 42, 61, 0.03), 0 2px 8px rgba(15, 42, 61, 0.04);
+}
+
+.topbar-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.topbar-user .avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--gradient-navy);
+  color: var(--gold-400);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.82rem;
+  box-shadow: var(--shadow-navy);
+}
+
+.topbar-clock {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.content {
+  padding: 28px;
+  flex: 1;
+}
+
+/* ---------- Typography ---------- */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-header h1 { font-size: 1.5rem; font-weight: 600; }
+.page-subtitle { color: var(--text-secondary); font-size: 0.88rem; margin-top: 4px; }
+
+/* ---------- Cards / surfaces ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+.card-flat {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--gradient-surface-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  /* Grid items default to min-width:auto, which lets a long nowrap money
+     value (e.g. "35.100 BHD") force this card - and the whole page - wider
+     than the phone's viewport. min-width:0 lets the card actually shrink
+     to the grid track instead of blowing out the layout. */
+  min-width: 0;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.stat-card .stat-label {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-card .stat-value {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 700;
+  min-width: 0;
+}
+/* .money is intentionally white-space:nowrap everywhere else (tables etc.)
+   so numbers never break mid-digit. Inside a stat card on a narrow phone
+   that's exactly what was blowing the layout out sideways - so here, once
+   the card has genuinely run out of room, let it ellipsis instead of
+   pushing the whole page wider. */
+.stat-card .stat-value .money {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+.stat-card.accent { border-left: 3px solid var(--gold-500); background: linear-gradient(135deg, var(--gold-100) 0%, var(--surface) 40%); }
+.stat-card.danger-accent { border-left: 3px solid var(--danger); background: linear-gradient(135deg, var(--danger-bg) 0%, var(--surface) 40%); }
+.stat-card.success-accent { border-left: 3px solid var(--success); background: linear-gradient(135deg, var(--success-bg) 0%, var(--surface) 40%); }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 0.86rem;
+  font-weight: 600;
+  transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, background 0.22s ease, color 0.15s;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+/* Diagonal shine sweep - a soft light band that glides across the button
+   on hover, giving solid-colour buttons a glossier, more 3D feel without
+   needing any extra markup or JS. */
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,0.28) 42%, rgba(255,255,255,0.05) 58%, transparent 80%);
+  transform: translateX(-120%);
+  transition: transform 0.55s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+.btn:hover::after { transform: translateX(120%); }
+.btn-outline::after, .btn-ghost::after { display: none; } /* flat/outline styles stay flat, no shine */
+
+.btn-primary {
+  background: var(--gradient-navy); color: #fff;
+  box-shadow: var(--shadow-navy), inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -2px 4px rgba(0,0,0,0.14);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(15, 42, 61, 0.38), inset 0 1px 0 rgba(255,255,255,0.22); }
+.btn-primary:active { transform: translateY(0) scale(0.98); box-shadow: 0 2px 6px rgba(15, 42, 61, 0.3), inset 0 2px 4px rgba(0,0,0,0.2); }
+
+.btn-gold {
+  background: var(--gradient-gold); color: var(--navy-900);
+  box-shadow: var(--shadow-gold), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -2px 4px rgba(150,110,10,0.22);
+}
+.btn-gold:hover { background: var(--gradient-gold-hover); transform: translateY(-2px); box-shadow: 0 10px 24px rgba(201, 162, 39, 0.48), inset 0 1px 0 rgba(255,255,255,0.6); }
+.btn-gold:active { transform: translateY(0) scale(0.98); box-shadow: 0 2px 6px rgba(201, 162, 39, 0.4), inset 0 2px 4px rgba(150,110,10,0.3); }
+
+.btn-outline { background: var(--surface); border: 1.5px solid var(--border); color: var(--text-primary); box-shadow: 0 1px 2px rgba(15,42,61,0.05); }
+.btn-outline:hover { border-color: var(--navy-700); background: var(--surface-raised); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.btn-outline:active { transform: translateY(0) scale(0.98); }
+
+.btn-danger { background: var(--danger-bg); color: var(--danger); }
+.btn-danger:hover { background: var(--gradient-danger); color: #fff; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(209, 69, 69, 0.38), inset 0 1px 0 rgba(255,255,255,0.2); }
+.btn-danger:active { transform: translateY(0) scale(0.98); }
+
+.btn-ghost { background: transparent; color: var(--text-secondary); padding: 8px 12px; }
+.btn-ghost:hover { background: var(--bg); color: var(--text-primary); transform: translateY(-1px); }
+.btn-ghost::after { content: none; }
+
+/* ---------- Row action buttons (Edit / Adjust / Delete / View) ----------
+   Each action gets its own accessible, contrasting color instead of the
+   flat grey ghost button used everywhere before. WCAG AA contrast checked
+   against white backgrounds. Icon-only by default; .with-label variants
+   show text too for primary actions on important screens. */
+.row-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  transition: background 0.18s, color 0.18s, transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s;
+  flex-shrink: 0;
+}
+.row-action:active { transform: scale(0.9); }
+.row-action svg { width: 16px; height: 16px; }
+.row-action.with-label { width: auto; padding: 7px 12px; font-size: 0.78rem; font-weight: 600; }
+
+.row-action-view {
+  background: #EAF1FA;
+  color: #1D5FA8;
+}
+.row-action-view:hover { background: #1D5FA8; color: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(29, 95, 168, 0.32); }
+
+.row-action-edit {
+  background: #FBF1E2;
+  color: var(--gold-600);
+}
+.row-action-edit:hover { background: var(--gradient-gold); color: var(--navy-900); transform: translateY(-1px); box-shadow: var(--shadow-gold); }
+
+.row-action-adjust {
+  background: #EDE9FB;
+  color: #5B3FBF;
+}
+.row-action-adjust:hover { background: #5B3FBF; color: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(91, 63, 191, 0.32); }
+
+.row-action-delete {
+  background: var(--danger-bg);
+  color: var(--danger-600);
+}
+.row-action-delete:hover { background: var(--gradient-danger); color: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(209, 69, 69, 0.32); }
+
+.row-action:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+.row-actions-group { display: flex; gap: 6px; justify-content: flex-end; }
+
+/* ---------- ActionMenu: "..." dropdown used in table rows with many actions
+   (Quotations, Delivery) instead of cramming several small buttons into one
+   cell, which overlapped/became unreadable. ---------- */
+.action-menu { position: relative; display: inline-block; }
+.action-menu-trigger {
+  width: 32px; height: 32px; border-radius: var(--radius-sm);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--surface-raised, #F2F4F7); color: var(--text-secondary);
+  border: 1px solid var(--border); transition: background 0.15s, color 0.15s;
+}
+.action-menu-trigger:hover { background: var(--navy-900); color: #fff; }
+.action-menu-list {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 60;
+  min-width: 200px; background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+  padding: 6px; display: flex; flex-direction: column; gap: 2px;
+}
+.action-menu-list.flip-up { top: auto; bottom: calc(100% + 4px); }
+.action-menu-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 10px; border-radius: 6px; font-size: 0.84rem; font-weight: 500;
+  text-align: left; color: var(--text-primary); background: transparent;
+  transition: background 0.12s;
+}
+.action-menu-item:hover { background: var(--bg, #F5F6F8); }
+.action-menu-item.danger { color: var(--danger-600); }
+.action-menu-item.danger:hover { background: var(--danger-bg); }
+.action-menu-icon { width: 16px; height: 16px; display: flex; flex-shrink: 0; }
+.action-menu-icon svg { width: 16px; height: 16px; }
+
+/* ---------- Filter panel grid (used across Sales History, Reports, Delivery) ---------- */
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+/* ---------- Global license expiry banner (shown on every screen) ---------- */
+.license-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 28px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.license-banner.warning {
+  background: var(--warning-bg);
+  color: #8a5a14;
+  border-bottom: 1px solid rgba(201, 122, 27, 0.25);
+}
+.license-banner.urgent {
+  background: var(--gradient-danger);
+  color: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  animation: pulseBanner 2.2s ease-in-out infinite;
+}
+@keyframes pulseBanner {
+  0%, 100% { box-shadow: inset 0 0 0 rgba(255,255,255,0); }
+  50% { box-shadow: inset 0 0 24px rgba(255,255,255,0.15); }
+}
+
+.btn-sm { padding: 7px 12px; font-size: 0.8rem; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+.btn svg { width: 16px; height: 16px; }
+
+/* ---------- Forms ---------- */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  background: var(--surface);
+  color: var(--text-primary);
+  transition: border-color 0.15s;
+}
+/* Root cause of "page opens/stays zoomed in on mobile, can't zoom back out":
+   0.88rem (~14px) is BELOW the 16px iOS Safari treats as "safe" - focusing
+   ANY input under that size force-zooms the whole page in, and since the
+   viewport meta tag sets user-scalable=no, pinch-to-zoom-out (the normal
+   escape hatch) is disabled too, so it stays zoomed. This applies on every
+   screen, not just modals, which is why it happened after navigating to
+   basically anywhere. 16px+ on real mobile widths stops the auto-zoom from
+   ever triggering, with no visual size change on desktop. */
+@media (max-width: 640px) {
+  .form-input, .form-select, .form-textarea,
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--navy-700);
+  box-shadow: 0 0 0 3px rgba(22, 56, 79, 0.1);
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-hint { font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ---------- Tables ---------- */
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  text-align: left;
+  padding: 13px 16px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  background: linear-gradient(180deg, var(--surface-raised) 0%, #F5F7F9 100%);
+  border-bottom: 1.5px solid var(--border);
+  font-weight: 700;
+}
+tbody td {
+  padding: 13px 16px;
+  font-size: 0.87rem;
+  border-bottom: 1px solid var(--border);
+}
+tbody tr { transition: background 0.12s; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: linear-gradient(90deg, var(--gold-100) 0%, var(--surface-raised) 12%); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 100px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.badge-success { background: var(--success-bg); color: var(--success-600); border-color: rgba(31, 138, 76, 0.18); }
+.badge-danger { background: var(--danger-bg); color: var(--danger-600); border-color: rgba(209, 69, 69, 0.18); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); border-color: rgba(201, 122, 27, 0.18); }
+.badge-neutral { background: var(--bg); color: var(--text-secondary); border-color: var(--border); }
+.badge-gold { background: var(--gold-100); color: var(--gold-600); border-color: rgba(201, 162, 39, 0.22); }
+.badge-info { background: rgba(59, 130, 246, 0.12); color: #2563eb; border-color: rgba(59, 130, 246, 0.22); }
+
+/* ---------- Modal ---------- */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(10, 24, 35, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  animation: fadeIn 0.18s ease;
+}
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 26px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 30px 70px rgba(10, 24, 35, 0.35);
+  animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.modal.modal-lg { max-width: 700px; }
+@media (max-width: 640px) {
+  .modal-overlay { padding: 8px; align-items: flex-start; }
+  .modal, .modal.modal-lg { max-width: 100%; max-height: 94vh; padding: 16px; border-radius: 14px; margin-top: 6px; }
+  .modal-header { margin-bottom: 12px; }
+  .modal-header h3 { font-size: 1.02rem; }
+  /* 16px is the minimum iOS Safari won't auto-zoom on focus for. Anything
+     smaller here was the real cause of "opens zoomed in and won't zoom back
+     out" on mobile - user-scalable=no (in index.html) blocks the pinch
+     gesture that used to be the only way out of it. */
+  .modal .form-input, .modal .form-select, .modal .form-textarea { font-size: 16px; padding: 9px 10px; }
+  .modal .form-label { font-size: 0.78rem; }
+  .modal .btn { padding: 10px 14px; font-size: 0.88rem; }
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px;
+}
+.modal-header h3 { font-size: 1.15rem; font-weight: 600; font-family: var(--font-display); }
+.modal-close {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+}
+.modal-close:hover { background: var(--bg); color: var(--text-primary); }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ---------- Toast notifications ---------- */
+.toast-container {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  display: flex; flex-direction: column; gap: 10px;
+  z-index: 200;
+}
+.toast {
+  background: var(--gradient-navy);
+  color: #fff;
+  padding: 13px 18px;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 500;
+  box-shadow: 0 12px 28px rgba(15, 42, 61, 0.3);
+  min-width: 240px;
+  display: flex; align-items: center; gap: 10px;
+  animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.toast.toast-error { background: var(--gradient-danger); box-shadow: 0 12px 28px rgba(209, 69, 69, 0.32); }
+.toast.toast-success { background: var(--gradient-success); box-shadow: 0 12px 28px rgba(31, 138, 76, 0.32); }
+
+/* ---------- Empty states ---------- */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+.empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.5; }
+.empty-state p { font-size: 0.9rem; margin: 0; }
+
+/* ---------- Tabs ---------- */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 22px;
+}
+.tab {
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.tab:hover { color: var(--text-primary); }
+.tab.active { color: var(--navy-900); border-bottom-color: var(--gold-500); font-weight: 600; }
+
+/* ---------- Login / Activation screens ---------- */
+.center-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-navy);
+  background-image:
+    radial-gradient(circle at 15% 20%, rgba(201, 162, 39, 0.10) 0%, transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(201, 162, 39, 0.08) 0%, transparent 45%),
+    linear-gradient(160deg, #143850 0%, #0F2A3D 55%, #0A1F2E 100%);
+  padding: 20px;
+}
+.auth-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+}
+.auth-logo {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: var(--gradient-gold);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: var(--navy-900);
+  margin: 0 auto 18px;
+  box-shadow: var(--shadow-gold);
+}
+.auth-card h2 {
+  text-align: center;
+  font-size: 1.3rem;
+  margin-bottom: 4px;
+}
+.auth-subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  margin-bottom: 26px;
+}
+.auth-error {
+  background: var(--danger-bg);
+  color: var(--danger-600);
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.83rem;
+  margin-bottom: 16px;
+  border: 1px solid rgba(209, 69, 69, 0.18);
+}
+.brand-footer-mark {
+  text-align: center;
+  margin-top: 22px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+/* ---------- Quick-add inline create (select + input + button) ---------- */
+.quick-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.quick-add-row .form-select { flex: 1; }
+.quick-add-row .quick-add-input { flex: 1; }
+.btn-quick-add {
+  width: 42px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--gradient-navy);
+  color: var(--gold-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+  box-shadow: var(--shadow-navy), inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -2px 4px rgba(0,0,0,0.14);
+}
+.btn-quick-add:hover { background: var(--gradient-gold); color: var(--navy-900); box-shadow: var(--shadow-gold), inset 0 1px 0 rgba(255,255,255,0.55); transform: translateY(-2px); }
+.btn-quick-add:active { transform: scale(0.93); box-shadow: 0 2px 6px rgba(0,0,0,0.25), inset 0 2px 4px rgba(0,0,0,0.2); }
+.btn-quick-add:disabled { opacity: 0.5; }
+
+/* ---------- Big action button grid (module landing actions) ---------- */
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.action-card {
+  background: var(--gradient-surface-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s, border-color 0.18s;
+  position: relative;
+  overflow: hidden;
+}
+.action-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--gradient-gold);
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.action-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--gold-400);
+}
+.action-card:hover::before { opacity: 1; }
+.action-card .action-icon {
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--gradient-navy);
+  color: var(--gold-500);
+  box-shadow: var(--shadow-navy);
+}
+.action-card .action-icon svg { width: 22px; height: 22px; }
+.action-card.gold .action-icon { background: var(--gradient-gold); color: var(--navy-900); box-shadow: var(--shadow-gold); }
+.action-card .action-title { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; }
+.action-card .action-desc { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.4; }
+.action-card .action-count {
+  position: absolute;
+  top: 16px; right: 16px;
+  background: var(--gold-100);
+  color: #8a6c14;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 100px;
+}
+
+/* ---------- Pill-style toolbar buttons (consistent module toolbars) ---------- */
+.toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+  align-items: center;
+}
+.btn-icon-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 100px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8F9FB 100%);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(15,42,61,0.05);
+  transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s, background 0.2s, border-color 0.2s, color 0.2s;
+}
+.btn-icon-label:hover { border-color: var(--navy-700); background: var(--surface-raised); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.btn-icon-label:active { transform: translateY(0) scale(0.97); }
+.btn-icon-label.primary { background: var(--gradient-navy); border-color: transparent; color: #fff; box-shadow: var(--shadow-navy), inset 0 1px 0 rgba(255,255,255,0.16); }
+.btn-icon-label.primary:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(15, 42, 61, 0.38), inset 0 1px 0 rgba(255,255,255,0.22); }
+.btn-icon-label.gold { background: var(--gradient-gold); border-color: transparent; color: var(--navy-900); box-shadow: var(--shadow-gold), inset 0 1px 0 rgba(255,255,255,0.5); }
+.btn-icon-label.gold:hover { background: var(--gradient-gold-hover); transform: translateY(-2px); box-shadow: 0 10px 24px rgba(201, 162, 39, 0.48), inset 0 1px 0 rgba(255,255,255,0.6); }
+.btn-icon-label.danger { background: var(--danger-bg); border-color: var(--danger-bg); color: var(--danger); }
+.btn-icon-label.danger:hover { background: var(--gradient-danger); border-color: transparent; color: #fff; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(209, 69, 69, 0.38); }
+.btn-icon-label svg { width: 16px; height: 16px; }
+.btn-icon-label:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+/* ---------- Bulk-select toolbar (appears when rows are checked) ---------- */
+.bulk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--navy-900);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  margin-bottom: 14px;
+  animation: slideUp 0.15s ease;
+}
+.bulk-toolbar .bulk-count { font-weight: 600; font-size: 0.86rem; }
+.bulk-toolbar .btn-icon-label { background: rgba(255,255,255,0.1); border-color: transparent; color: #fff; }
+.bulk-toolbar .btn-icon-label:hover { background: rgba(255,255,255,0.18); }
+.bulk-toolbar .btn-icon-label.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.bulk-toolbar .btn-icon-label.danger:hover { background: #b93b3b; }
+.row-checkbox { width: 17px; height: 17px; cursor: pointer; accent-color: var(--gold-500); }
+
+/* ---------- Order-type selector buttons (walk-in / delivery / pickup) ---------- */
+.order-type-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.order-type-btn {
+  padding: 9px 6px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.order-type-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+.order-type-btn.active {
+  border-color: var(--gold-500);
+  background: var(--gold-100);
+  color: var(--navy-900);
+}
+
+/* Collapsible delivery detail fields - hidden by default until needed */
+.pos-delivery-fields {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.pos-delivery-fields .form-group { margin-bottom: 10px; }
+.pos-delivery-fields .form-label { font-size: 0.76rem; margin-bottom: 4px; }
+.pos-delivery-fields .form-input,
+.pos-delivery-fields .form-select,
+.pos-delivery-fields .form-textarea { padding: 8px 10px; font-size: 0.82rem; }
+@media (max-width: 640px) {
+  .pos-delivery-fields .form-textarea { font-size: 16px; }
+}
+
+/* ---------- Loyalty badge ---------- */
+.loyalty-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--gold-100), #fff3cd);
+  color: #8a6c14;
+}
+.loyalty-badge svg { width: 12px; height: 12px; }
+
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); transition: transform 0.2s; z-index: 50; }
+  .sidebar.open { transform: translateX(0); }
+  .main-area { margin-left: 0; }
+  .form-row { grid-template-columns: 1fr; }
+}
+
+.mobile-menu-btn { display: none; }
+@media (max-width: 900px) {
+  .mobile-menu-btn { display: flex; }
+}
+
+
+/* ================================================================
+   COLOUR THEMES — applied via data-theme on <body>
+   Each theme overrides BOTH the navy sidebar AND the main background
+   ================================================================ */
+
+/* ── DARK NAVY (default — no attribute needed) ─────────────────── */
+
+/* ── PURPLE GALAXY ─────────────────────────────────────────────── */
+body[data-theme="purple"] {
+  --navy-900: #1a0533;
+  --navy-800: #240a47;
+  --navy-700: #3b1270;
+  --gold-600: #7c3aed;
+  --gold-500: #8b5cf6;
+  --gold-400: #a78bfa;
+  --bg: #f5f0ff;
+  --surface: #ffffff;
+  --gradient-navy: linear-gradient(160deg, #1a0533 0%, #3b1270 100%);
+  --gradient-gold: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 60%, #7c3aed 100%);
+  --gradient-gold-hover: linear-gradient(135deg, #c4b5fd 0%, #a78bfa 60%, #8b5cf6 100%);
+  background: radial-gradient(circle at top right, #ede9fe 0%, #f5f0ff 60%) !important;
+}
+
+/* ── FOREST GREEN ──────────────────────────────────────────────── */
+body[data-theme="green"] {
+  --navy-900: #022c22;
+  --navy-800: #064e3b;
+  --navy-700: #065f46;
+  --gold-600: #059669;
+  --gold-500: #10b981;
+  --gold-400: #34d399;
+  --bg: #ecfdf5;
+  --surface: #ffffff;
+  --gradient-navy: linear-gradient(160deg, #022c22 0%, #065f46 100%);
+  --gradient-gold: linear-gradient(135deg, #34d399 0%, #10b981 60%, #059669 100%);
+  --gradient-gold-hover: linear-gradient(135deg, #6ee7b7 0%, #34d399 60%, #10b981 100%);
+  background: radial-gradient(circle at top right, #d1fae5 0%, #ecfdf5 60%) !important;
+}
+
+/* ── OCEAN BLUE ────────────────────────────────────────────────── */
+body[data-theme="blue"] {
+  --navy-900: #0f172a;
+  --navy-800: #1e3a8a;
+  --navy-700: #1d4ed8;
+  --gold-600: #2563eb;
+  --gold-500: #3b82f6;
+  --gold-400: #60a5fa;
+  --bg: #eff6ff;
+  --surface: #ffffff;
+  --gradient-navy: linear-gradient(160deg, #0f172a 0%, #1e3a8a 100%);
+  --gradient-gold: linear-gradient(135deg, #60a5fa 0%, #3b82f6 60%, #2563eb 100%);
+  --gradient-gold-hover: linear-gradient(135deg, #93c5fd 0%, #60a5fa 60%, #3b82f6 100%);
+  background: radial-gradient(circle at top right, #dbeafe 0%, #eff6ff 60%) !important;
+}
+
+/* ── CRIMSON RED ───────────────────────────────────────────────── */
+body[data-theme="red"] {
+  --navy-900: #450a0a;
+  --navy-800: #7f1d1d;
+  --navy-700: #991b1b;
+  --gold-600: #b91c1c;
+  --gold-500: #dc2626;
+  --gold-400: #ef4444;
+  --bg: #fff5f5;
+  --surface: #ffffff;
+  --gradient-navy: linear-gradient(160deg, #450a0a 0%, #991b1b 100%);
+  --gradient-gold: linear-gradient(135deg, #ef4444 0%, #dc2626 60%, #b91c1c 100%);
+  --gradient-gold-hover: linear-gradient(135deg, #fca5a5 0%, #ef4444 60%, #dc2626 100%);
+  background: radial-gradient(circle at top right, #fee2e2 0%, #fff5f5 60%) !important;
+}
+
+/* ── DARK MODE (full dark) ─────────────────────────────────────── */
+body[data-theme="dark"] {
+  --navy-900: #0d0d0d;
+  --navy-800: #1a1a1a;
+  --navy-700: #2a2a2a;
+  --gold-600: #d97706;
+  --gold-500: #f59e0b;
+  --gold-400: #fbbf24;
+  --bg: #111111;
+  --surface: #1e1e1e;
+  --surface-raised: #252525;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border: rgba(255,255,255,0.08);
+  --gradient-navy: linear-gradient(160deg, #0d0d0d 0%, #1a1a1a 100%);
+  --gradient-gold: linear-gradient(135deg, #fbbf24 0%, #f59e0b 60%, #d97706 100%);
+  background: #111111 !important;
+}
+body[data-theme="dark"] .main-content { background: #111111; }
+body[data-theme="dark"] .card-flat,
+body[data-theme="dark"] .stat-card { background: #1e1e1e; border-color: rgba(255,255,255,0.08); }
+body[data-theme="dark"] .form-input,
+body[data-theme="dark"] .form-select { background: #252525; border-color: rgba(255,255,255,0.12); color: #f1f5f9; }
+body[data-theme="dark"] .table-wrap table thead th { background: #252525; }
+body[data-theme="dark"] .table-wrap table tbody tr:hover { background: #2a2a2a; }
+
+/* ===========================================================
+   Product photo — search / upload / preview (Add/Edit Product)
+   =========================================================== */
+.product-photo-group { margin-bottom: 16px; }
+
+.product-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.product-photo-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-md, 10px);
+  background: var(--surface, #f4f4f5);
+  border: 1px solid var(--border, rgba(0,0,0,0.08));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.product-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-photo-placeholder {
+  font-size: 28px;
+  opacity: 0.5;
+}
+
+.product-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.photo-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.photo-result-thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border-radius: 8px;
+  border: 2px solid var(--border, rgba(0,0,0,0.08));
+  overflow: hidden;
+  cursor: pointer;
+  background: none;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.photo-result-thumb:hover {
+  border-color: var(--gold-500, #f59e0b);
+  transform: translateY(-2px);
+}
+
+.photo-result-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Small thumbnail shown next to product name in the Inventory table */
+.inv-row-thumb {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border, rgba(0,0,0,0.08));
+}
+
+.inv-row-thumb-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  background: var(--surface, #f4f4f5);
+  opacity: 0.6;
+}
+
+/* ── Quick Cart (global floating quick-order widget, draggable) ────────── */
+.order-pad-fab {
+  position: fixed;
+  top: 16px;
+  right: 24px;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: none;
+  background: var(--gradient-gold, linear-gradient(135deg, #DAB94A, #B08A1C));
+  color: var(--navy-900, #0F2A3D);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: grab;
+  box-shadow: 0 6px 18px rgba(176, 138, 28, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  touch-action: none;
+  user-select: none;
+}
+.order-pad-fab:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(176, 138, 28, 0.45); }
+.order-pad-fab:active { cursor: grabbing; }
+@keyframes orderPadFabEnter {
+  0%   { transform: scale(0.4) translateY(-14px); opacity: 0; }
+  60%  { transform: scale(1.08) translateY(2px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.order-pad-fab-enter { animation: orderPadFabEnter 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.order-pad-badge {
+  background: var(--danger, #D14545);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  border-radius: 999px;
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+}
+.order-pad-panel {
+  position: fixed;
+  top: 62px;
+  right: 24px;
+  z-index: 149;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--surface, #fff);
+  border-radius: 16px;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.28);
+  border: 1px solid var(--border, rgba(0,0,0,0.08));
+  animation: orderPadPanelEnter 0.18s ease-out;
+}
+@keyframes orderPadPanelEnter {
+  from { transform: translateY(-6px) scale(0.98); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+.order-pad-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--gradient-navy, linear-gradient(135deg, #12263a, #1a3a52));
+  color: #fff;
+  border-radius: 16px 16px 0 0;
+}
+.order-pad-header-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.order-pad-header-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #fff;
+  flex-shrink: 0;
+}
+.order-pad-header-titles { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.order-pad-header-titles strong { font-size: 0.94rem; letter-spacing: 0.2px; }
+.order-pad-header-titles span {
+  font-size: 0.68rem;
+  color: var(--gold-300, #E8CD78);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 190px;
+}
+.order-pad-header strong { font-size: 0.98rem; letter-spacing: 0.2px; }
+.order-pad-close {
+  background: rgba(255,255,255,0.14);
+  border: none;
+  color: #fff;
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.order-pad-close:hover { background: rgba(255,255,255,0.26); }
+.order-pad-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 10px 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border, rgba(0,0,0,0.08));
+  background: var(--bg, #F7F8FA);
+}
+.order-pad-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border-radius: 10px 10px 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.order-pad-tab:hover:not(.active) { background: rgba(184, 134, 11, 0.08); }
+.order-pad-tab.active { background: var(--surface, #fff); color: var(--gold-600); box-shadow: 0 -2px 0 var(--gold-600) inset; }
+.order-pad-tab-x, .order-pad-item-x {
+  width: 13px; height: 13px; display: inline-flex; opacity: 0.6; cursor: pointer;
+}
+.order-pad-tab-x:hover, .order-pad-item-x:hover { opacity: 1; }
+.order-pad-tab-add {
+  padding: 8px 13px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--gold-600);
+}
+.order-pad-body { padding: 16px 18px; }
+.order-pad-title { font-weight: 700; margin-bottom: 12px; font-size: 0.94rem; color: var(--navy-900, #12263a); }
+.order-pad-field-group { margin-bottom: 8px; }
+.order-pad-field-label {
+  display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px;
+  text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;
+}
+.order-pad-linked-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.76rem; color: var(--success, #16a34a);
+  background: var(--success-bg, #ecfdf3); border-radius: 8px;
+  padding: 6px 10px; margin-top: 6px;
+}
+.order-pad-linked-badge svg { width: 14px; height: 14px; flex-shrink: 0; }
+.order-pad-linked-badge button {
+  margin-left: auto; background: none; border: none; color: var(--gold-600);
+  font-weight: 700; font-size: 0.74rem; cursor: pointer; text-decoration: underline;
+}
+.order-pad-search-results {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0; right: 0;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, rgba(0,0,0,0.1));
+  border-radius: 10px;
+  margin-top: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.16);
+  z-index: 5;
+}
+.order-pad-search-item, .order-pad-search-empty, .order-pad-search-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 12px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.order-pad-search-item:hover, .order-pad-search-result:hover { background: var(--gold-100); }
+.order-pad-search-empty { color: var(--text-muted); cursor: default; }
+
+/* SearchableSelect - fast type-to-filter replacement UI for plain product
+   <select> dropdowns (Purchases line items, Return-to-Supplier, etc). */
+.searchable-select-wrap { position: relative; }
+.searchable-select-list {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0; right: 0;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, rgba(0,0,0,0.1));
+  border-radius: 10px;
+  margin-top: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.16);
+  z-index: 20;
+}
+.searchable-select-item, .searchable-select-empty {
+  padding: 9px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.searchable-select-item:hover { background: var(--gold-100); }
+.searchable-select-empty { color: var(--text-muted); cursor: default; }
+
+.order-pad-items {
+  border: 1px solid var(--border, rgba(0,0,0,0.08));
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  background: var(--bg, #F7F8FA);
+}
+.order-pad-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(0,0,0,0.06);
+}
+.order-pad-item-row:last-child { border-bottom: none; }
+.order-pad-total {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--navy-900, #12263a);
+  padding-top: 8px;
+  border-top: 1px dashed var(--border, rgba(0,0,0,0.1));
+  margin-top: 6px;
+}
+.order-pad-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.order-pad-actions .btn-icon-label {
+  flex: 1; justify-content: center; font-size: 0.78rem; font-weight: 700;
+  padding: 10px 8px; border-radius: 10px; transition: transform 0.1s, filter 0.1s;
+}
+.order-pad-actions .btn-icon-label:hover { filter: brightness(0.97); transform: translateY(-1px); }
+.order-pad-actions .btn-icon-label svg { width: 15px; height: 15px; }
+
+.order-pad-history-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; }
+.order-pad-history-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 10px; border: 1px solid var(--border, #eee); border-radius: 10px;
+  cursor: pointer; transition: background 0.12s, border-color 0.12s;
+}
+.order-pad-history-row:hover { background: var(--gold-100, #fbf3d9); border-color: rgba(184,134,11,0.25); }
+.order-pad-history-row.refunded { opacity: 0.6; }
+.order-pad-history-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.order-pad-history-main strong { font-size: 0.85rem; color: var(--navy-900, #12263a); }
+.order-pad-history-main span { font-size: 0.74rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.order-pad-history-side { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.order-pad-history-side .money { font-size: 0.85rem; font-weight: 700; color: var(--navy-900, #12263a); }
+.order-pad-history-time { font-size: 0.68rem; color: var(--text-muted); white-space: nowrap; }
+.order-pad-history-badge {
+  font-size: 0.68rem; font-weight: 700; color: var(--danger, #D14545);
+  background: rgba(209, 69, 69, 0.1); padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+}
+.order-pad-history-refund {
+  border: none; background: rgba(209, 69, 69, 0.1); color: var(--danger, #D14545);
+  width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; cursor: pointer; transition: background 0.12s;
+}
+.order-pad-history-refund svg { width: 13px; height: 13px; }
+.order-pad-history-refund:hover { background: rgba(209, 69, 69, 0.22); }
+
+@media (max-width: 900px) {
+  .dash-two-col { grid-template-columns: 1fr !important; }
+  .order-pad-fab { top: auto; bottom: 16px; right: 16px; }
+  .order-pad-panel { top: auto; bottom: 70px; right: 16px; }
+}
+
+/* ---------- Mobile layout safety net ---------- */
+/* Prevents any one oversized element (long labels, wide toolbars, big
+   numbers) from ever pushing the whole app sideways again - the page
+   scrolls vertically only, individual rows wrap/shrink instead. */
+html, body { overflow-x: hidden; max-width: 100vw; }
+.content { min-width: 0; }
+.toolbar-row > div { flex-wrap: wrap; }
+
+@media (max-width: 480px) {
+  .content { padding: 16px 14px 90px; }
+  .toolbar-row { gap: 8px; }
+  .btn-icon-label { padding: 8px 12px; font-size: 0.78rem; }
+  .toolbar-row > div[style*="margin-left"] { margin-left: 0 !important; width: 100%; }
+  .stat-grid { grid-template-columns: 1fr !important; }
+  .stat-card .stat-value { font-size: 1.4rem; }
+  .page-header { gap: 10px; }
+  /* Icon-only pill on narrow phones - keeps the button small and out of
+     the way of stat cards underneath it (label stays in the markup, just
+     visually hidden via font-size:0 on this narrow breakpoint). */
+  .order-pad-fab { padding: 12px; gap: 0; border-radius: 50%; font-size: 0; }
+  .order-pad-fab .order-pad-badge {
+    font-size: 0.7rem;
+    position: absolute; top: -4px; right: -4px;
+  }
+}
+
+/* ---------- Mobile portrait: fix content getting clipped off-screen ----------
+   Root cause: CSS grid/flex children default to a minimum width equal to
+   their content's natural size, so even a "1 column" grid on mobile could
+   still be forced wider than the screen by something inside it (a table,
+   a long title next to a button) - and because html/body has
+   overflow-x:hidden globally (to stop the whole page from scrolling
+   sideways), that excess width was invisibly CROPPED instead of wrapping
+   or scrolling. This restores real shrinking + gives wide tables their own
+   horizontal scrollbar instead of being cut off. */
+.dash-two-col > *, .card-flat, .stat-card, .toolbar-row, .page-header {
+  min-width: 0;
+}
+@media (max-width: 700px) {
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-wrap table { min-width: 560px; }
+  /* Card header rows written as inline flex "title + action link" (Live
+     Reports, list screens) - let them wrap instead of squeezing the link
+     off the edge. */
+  .card-flat > div[style*="justify-content:space-between"],
+  .card-flat > div[style*="justify-content: space-between"] {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  /* The "Customize Metrics / Generate Report" button pair on Dashboard,
+     and similar right-aligned action groups - wrap onto their own line(s)
+     and let each button shrink instead of running off the right edge. */
+  .toolbar-row > div[style*="margin-left"] {
+    flex-wrap: wrap;
+  }
+  .toolbar-row > div[style*="margin-left"] .btn-icon-label {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
+@media (max-width: 480px) {
+  h1 { font-size: 1.3rem; }
+  h3[style*="font-size:1rem"] { font-size: 0.92rem; }
+}
+
+/* ---------- Safe-area padding for notched phones / installed PWA ---------- */
+.topbar { padding-left: max(20px, env(safe-area-inset-left)); padding-right: max(20px, env(safe-area-inset-right)); }
+.sidebar { padding-top: env(safe-area-inset-top); }
+.content { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+
+/* ---------- Advanced Size Adjustment sliders (Settings > Receipt) ----------
+   Live drag-to-preview controls, replacing the old number inputs that only
+   updated on blur and felt unresponsive. */
+.size-slider-group { display: flex; flex-direction: column; gap: 18px; margin-top: 4px; }
+.size-slider-row { display: flex; flex-direction: column; gap: 8px; }
+.size-slider-label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.84rem; font-weight: 600; color: var(--text-secondary);
+}
+.size-slider-value {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700;
+  color: var(--navy-900); background: var(--gold-100);
+  padding: 3px 10px; border-radius: 999px; min-width: 52px; text-align: center;
+}
+.size-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 6px; border-radius: 999px;
+  background: var(--border); outline: none; cursor: pointer;
+}
+.size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--gradient-gold, #B8860B); border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3); cursor: pointer;
+  transition: transform 0.1s;
+}
+.size-slider::-webkit-slider-thumb:active { transform: scale(1.15); }
+.size-slider::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%; border: 3px solid #fff;
+  background: var(--gradient-gold, #B8860B); box-shadow: 0 1px 4px rgba(0,0,0,0.3); cursor: pointer;
+}
+.size-slider:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---------- Topbar on narrow portrait phones ----------
+   .topbar-right (clock + user name/role + Logout) has no wrap and the
+   topbar has a fixed height, so on a narrow portrait screen (~375-430px)
+   this row is wider than the screen and got clipped by the page's global
+   overflow-x:hidden - not just cramped, actually invisible/unreachable.
+   Trim it down to what's essential at this width instead of wrapping,
+   since wrapping would make the topbar tall enough to push page content
+   down inconsistently between screens. */
+@media (max-width: 480px) {
+  .topbar { padding: 0 12px; gap: 8px; }
+  .topbar-title { font-size: 1rem; }
+  .topbar-right { gap: 8px; }
+  .topbar-clock { display: none; }
+  .topbar-user > div:last-child { display: none; } /* hide name/role text, keep avatar */
+  #logout-btn { padding: 6px 10px; font-size: 0.78rem; }
+}
+@media (max-width: 380px) {
+  .topbar-user { display: none; } /* avatar too, on the very narrowest phones */
+}
+
+/* ---------- Install App banner ---------- */
+.install-banner {
+  position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 300;
+  background: var(--navy-900, #12263a); color: #fff;
+  border-radius: var(--radius-md, 10px);
+  padding: 12px 14px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+.install-banner-text { flex: 1 1 200px; font-size: 0.84rem; line-height: 1.4; }
+.install-banner-dismiss {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(255,255,255,0.12); color: #fff;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.install-banner-dismiss svg { width: 14px; height: 14px; }
+@media (min-width: 600px) {
+  .install-banner { left: auto; max-width: 380px; }
+}
