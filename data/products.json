@@ -2,7 +2,7 @@
   {
     "id": 1,
     "createdAt": "2026-07-13T20:30:33.844Z",
-    "updatedAt": "2026-07-13T20:30:33.844Z",
+    "updatedAt": "2026-07-21T11:58:32.466Z",
     "name": "Basmati Rice 5kg",
     "barcode": "6291003023310",
     "categoryId": 1,
@@ -10,7 +10,10 @@
     "sellPrice": 4.25,
     "stock": 50,
     "unit": "bag",
-    "vatApplicable": true
+    "vatApplicable": false,
+    "supplierId": 1,
+    "expiryDate": null,
+    "photo": ""
   },
   {
     "id": 2,
